@@ -8,11 +8,11 @@
 :root{
   --bg:#0b0f14;--panel:#131a22;--panel2:#1a232e;--line:#283442;--text:#e6edf3;--muted:#8d9aab;
   --a:#3fb6ff;--b:#ffb347;--ok:#3fb950;--warn:#e3b341;--bad:#f85149;--accent:#4cc2ff;
-  --building:#252d38;--bstroke:#1c232c;--street:#46505f;--main:#5a6476;--court:#33402f;--jump:#7a5522;
+  --building:#252d38;--bstroke:#1c232c;--street:#46505f;--main:#5a6476;--court:#33402f;--jump:#7a5522;--open:#2a3128;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:"Segoe UI",Arial,"Noto Sans Hebrew",sans-serif;font-size:15px}
-button{font:inherit;color:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel2);border-radius:10px;padding:10px 14px;min-height:44px}
+button,select{font:inherit;color:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel2);border-radius:10px;padding:10px 14px;min-height:44px}
 button:hover{border-color:#3b4a5c}
 button.primary{background:#1f6feb;border-color:#1f6feb;font-weight:600}
 button.ghost{background:transparent}
@@ -22,6 +22,7 @@ header{display:flex;align-items:center;gap:12px;padding:8px 14px;border-bottom:1
 .brand b{font-size:22px;letter-spacing:2px;color:var(--accent)}
 .brand span{color:var(--muted);font-size:13px}
 .hdr-sp{flex:1}
+#areaSel{min-height:36px;padding:4px 10px;font-size:13px}
 .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);font-size:13px;min-height:32px}
 .pill.on{color:var(--ok);border-color:#2a5a33}.pill.off{color:var(--bad);border-color:#6b2b2b}
 .steps{display:flex;gap:4px;padding:8px 14px;border-bottom:1px solid var(--line);overflow-x:auto;background:var(--panel)}
@@ -32,6 +33,7 @@ header{display:flex;align-items:center;gap:12px;padding:8px 14px;border-bottom:1
 svg#map{width:100%;height:auto;max-height:100%;display:block;background:#0f141a;border-radius:12px;border:1px solid var(--line);touch-action:manipulation}
 .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:middle;margin-left:4px}
+.attr{font-size:11px;color:var(--muted);margin-top:4px}
 aside{border-right:1px solid var(--line);background:var(--panel);overflow-y:auto;padding:12px}
 .tabs{display:flex;gap:6px;margin-bottom:12px}
 .tabs button{flex:1}
@@ -93,7 +95,8 @@ pre{white-space:pre-wrap;word-break:break-all;background:#0b0f14;padding:8px;bor
 </head>
 <body>
 <header>
-  <div class="brand"><b>TIES</b><span>מבצע ״חומת אש״ · העיר העתיקה · פלוגת החוד</span></div>
+  <div class="brand"><b>TIES</b><span id="sub"></span></div>
+  <select id="areaSel" title="מרחב פעולה"></select>
   <div class="hdr-sp"></div>
   <span id="timer" class="pill" title="זמן קבלת החלטה">⏱ --:--</span>
   <span id="queue" class="pill" title="דיווחים בתור לסנכרון">⏳ 0</span>
@@ -105,14 +108,16 @@ pre{white-space:pre-wrap;word-break:break-all;background:#0b0f14;padding:8px;bor
   <section class="mapwrap">
     <svg id="map" viewBox="0 0 600 400" role="img" aria-label="מפת גזרה"></svg>
     <div class="legend">
-      <span><i style="background:var(--main)"></i>רחוב ראשי</span>
+      <span><i style="background:var(--main)"></i>ציר ראשי</span>
       <span><i style="background:var(--street)"></i>רחוב צדדי</span>
-      <span><i style="background:var(--court)"></i>חצר פנימית</span>
+      <span><i style="background:var(--court)"></i>חצר / שטח פתוח</span>
       <span><i style="background:var(--jump)"></i>בית קפיצה</span>
       <span><i style="background:var(--building)"></i>מבנה</span>
       <span>🎯 צליפה · 💣 מטען · 🛸 רחפן · 👁 תצפית · 🚀 נ״ט</span>
       <label><input type="checkbox" id="showFiltered"> הצג אינדיקציות שסוננו</label>
+      <label id="satWrap"><input type="checkbox" id="sat"> רקע לוויין (דורש אינטרנט)</label>
     </div>
+    <div class="attr" id="attr"></div>
   </section>
   <aside>
     <div class="tabs">
@@ -124,32 +129,27 @@ pre{white-space:pre-wrap;word-break:break-all;background:#0b0f14;padding:8px;bor
 </div>
 <div id="toast"></div>
 
+<!-- נתוני מפה אמיתיים (OpenStreetMap) נטענים מקובץ מקומי – עובד גם ללא רשת -->
+<script src="data/khan-younis.js"></script>
 <script>
 "use strict";
-/* ============ שכבת המפה (נתונים מדומים) ============ */
-const W=30,H=20,CELL=20; // כל תא = 20 מ׳ → 600 מ׳ רוחב גזרה
-const MAP=[];
-for(let r=0;r<H;r++){
-  if(r===9||r===10) MAP.push("=".repeat(W));
-  else if(r===12) MAP.push("####.cccccccccc.ccccccccJ.####");
-  else if(r===13) MAP.push("####.cccccccccc.cccccccc#.####");
-  else MAP.push("####.##########.#########.####");
-}
-// sec = זמן מעבר תא (שניות), exposed = חשיפה לקווי ראייה
-const TER={
-  "#":{pass:false,name:"מבנה"},
-  "=":{pass:true,sec:8,exposed:1,name:"הרחוב המרכזי"},
-  ".":{pass:true,sec:9,exposed:.6,name:"רחוב צדדי"},
-  "c":{pass:true,sec:14,exposed:.05,name:"חצרות פנימיות"},
-  "J":{pass:true,sec:180,exposed:0,name:"בית קפיצה"}
+/* ============ טיפוסי שטח ואיומים ============ */
+// spm = שניות למטר, exposed = חשיפה לקווי ראייה (0–1)
+const TER_BASE={
+  "#":{pass:false,spm:1.2,exposed:0,name:"פריצה דרך מבנה"},
+  "=":{pass:true,spm:.4,exposed:1,name:"הרחוב המרכזי"},
+  ".":{pass:true,spm:.45,exposed:.6,name:"רחוב צדדי"},
+  "c":{pass:true,spm:.7,exposed:.05,name:"חצרות פנימיות"},
+  "J":{pass:true,spm:9,exposed:0,name:"בית קפיצה"}
 };
+const BREACH=150; // שניות לפריצה והתבססות בכניסה למבנה
 const TYPES={
   ied_door:{name:"מטען פתח",icon:"💣",kind:"point"},
   ied_side:{name:"מטען צד",icon:"💣",kind:"point"},
-  sniper:{name:"צליפה מחלון שולט",icon:"🎯",kind:"los",r:3},
-  observation:{name:"תצפית אויב",icon:"👁",kind:"los",r:3},
-  atgm:{name:"עמדת נ״ט",icon:"🚀",kind:"los",r:4},
-  drone:{name:"איום רחפנים",icon:"🛸",kind:"area",r:3}
+  sniper:{name:"צליפה מחלון שולט",icon:"🎯",kind:"los",rm:60},
+  observation:{name:"תצפית אויב",icon:"👁",kind:"los",rm:60},
+  atgm:{name:"עמדת נ״ט",icon:"🚀",kind:"los",rm:80},
+  drone:{name:"איום רחפנים",icon:"🛸",kind:"area",rm:60}
 };
 const RICON={pattern:"📈",anomaly:"⚠️",terrain:"⛰️"};
 /* מקורות: הלוחם לעולם אינו רואה את סוג המקור – רק ציון אמינות מופשט */
@@ -157,7 +157,16 @@ const PRIOR={
   ind:{door_jump:{a:22,b:3,label:"מטען פתח בבית קפיצה (תבנית)"},blue_barrel:{a:2,b:6,label:"חבית כחולה בשולי ציר"}},
   src:{VISINT:{a:8,b:2,label:"חוזי"},HUMINT:{a:7,b:3,label:"יומינט"},SIGINT:{a:13,b:7,label:"סיגינט"},ALGO:{a:9,b:11,label:"זיהוי אלגוריתמי"}}
 };
-const BASE_THREATS=[
+
+/* ============ מרחב 1: תרחיש סכמטי ״חומת אש״ ============ */
+const SCHEM_MAP=[];
+for(let r=0;r<20;r++){
+  if(r===9||r===10) SCHEM_MAP.push("=".repeat(30));
+  else if(r===12) SCHEM_MAP.push("####.cccccccccc.ccccccccJ.####");
+  else if(r===13) SCHEM_MAP.push("####.cccccccccc.cccccccc#.####");
+  else SCHEM_MAP.push("####.##########.#########.####");
+}
+const SCHEM_THREATS=[
  {id:"T1",type:"ied_door",cell:[24,12],sev:5,indicator:"door_jump",sources:[{k:"HUMINT",age:40,q:.95},{k:"VISINT",age:25,q:.95}],
   reasons:[["anomaly","צילום עדכני (לפני 25 דק׳) מראה שינוי בפתח הכניסה לעומת צילום קודם"],["pattern","תבנית: 3 אירועי מטען פתח בבתי קפיצה בגזרה ב-30 הימים האחרונים"],["terrain","צוואר בקבוק: מעבר יחיד בין החצרות לרחוב – אין כניסה חלופית למבנה"]]},
  {id:"T2",type:"sniper",cell:[6,8],sev:4,prob:.3,sources:[{k:"ALGO",age:90,q:.8}],
@@ -174,7 +183,6 @@ const BASE_THREATS=[
   reasons:[["anomaly","פעילות חריגה בסביבת המבנה"],["terrain","שולט על הכניסה למתחם היעד"],["pattern","סמיכות למטרה מוכרת"]]},
  {id:"T8",type:"ied_side",cell:[8,10],sev:5,indicator:"blue_barrel",sources:[{k:"ALGO",age:30,q:.8}],
   reasons:[["anomaly","זיהוי אוטומטי: חבית כחולה בשולי הציר שלא הופיעה אתמול"],["pattern","אינדיקטור ״חבית כחולה״ סומן ״נקי״ במקרים קודמים – משקלו הופחת"],["terrain","רוחב הרחוב מאפשר מעקף של 4 מ׳"]]},
- // אינדיקציות שיסוננו (רעש / לא רלוונטי)
  {id:"T9",type:"observation",cell:[8,2],sev:3,prob:.5,sources:[{k:"VISINT",age:100,q:.8}],reasons:[]},
  {id:"T10",type:"atgm",cell:[20,17],sev:5,prob:.4,sources:[{k:"HUMINT",age:200,q:.7}],reasons:[]},
  {id:"T11",type:"sniper",cell:[16,8],sev:4,prob:.5,sources:[{k:"ALGO",age:900,q:.7}],reasons:[]},
@@ -184,18 +192,118 @@ const BASE_THREATS=[
  {id:"T15",type:"ied_side",cell:[15,18],sev:5,prob:.3,sources:[{k:"ALGO",age:60,q:.7}],reasons:[]},
  {id:"T16",type:"sniper",cell:null,sources:[{k:"SIGINT",age:20,q:.5}],reasons:[]}
 ];
-const LIVE_INTEL={id:"N1",type:"drone",cell:[19,13],sev:3,prob:.5,live:true,sources:[{k:"HUMINT",age:0,q:.85}],
+const SCHEM_LIVE={id:"N1",type:"drone",cell:[19,13],sev:3,prob:.5,live:true,sources:[{k:"HUMINT",age:0,q:.85}],
   reasons:[["anomaly","דיווח חי מכוח שכן: רחפן מרחף מעל החצרות"],["pattern","שימוש ברחפני תקיפה בגזרה בשבוע האחרון"],["terrain","חצרות פתוחות למעלה – אין כיסוי עילי"]]};
+
+/* ============ מרחב 2: חאן יונס – מפה אמיתית (OSM) + איומים מדומים ============ */
+// pos = מטרים מהפינה הצפון-מערבית של התיחום (x מזרחה, y דרומה)
+const KHAN_THREATS=[
+ {id:"K1",type:"ied_door",pos:[492,312],bld:true,sev:5,indicator:"door_jump",sources:[{k:"HUMINT",age:40,q:.95},{k:"VISINT",age:25,q:.95}],
+  reasons:[["anomaly","צילום עדכני (לפני 25 דק׳) מראה שינוי בפתח המבנה לעומת צילום קודם"],["pattern","תבנית: אירועי מטען פתח במבני מעבר בגזרה בחודש האחרון"],["terrain","צוואר בקבוק: המבנה הוא המעבר היחיד מהסמטאות לציר – אין כניסה חלופית"]]},
+ {id:"K2",type:"sniper",pos:[382,307],sev:4,prob:.3,sources:[{k:"ALGO",age:90,q:.8}],
+  reasons:[["terrain","חלון בקומה 3 עם קו ראייה לאורך הציר המערבי"],["pattern","2 אירועי צליפה ממבנה זה בעבר"],["anomaly","תריס שנפתח בשעה חריגה – לא אומת"]]},
+ {id:"K3",type:"sniper",pos:[477,372],sev:4,prob:.55,sources:[{k:"VISINT",age:60,q:.85},{k:"ALGO",age:30,q:.8}],
+  reasons:[["anomaly","זוהתה תנועה חוזרת מאחורי החלון בשעה האחרונה"],["terrain","שולט על הצומת המרכזי – מכסה 60 מ׳ מהציר"],["pattern","עמדת ירי שתועדה במבצע קודם"]]},
+ {id:"K4",type:"sniper",pos:[547,392],sev:4,prob:.25,sources:[{k:"ALGO",age:200,q:.7}],
+  reasons:[["terrain","גג גבוה מעל הציר"],["pattern","דפוס כללי: מבנים רב-קומתיים לאורך הציר"],["anomaly","אין אינדיקציה טרייה – מידע בן 3 שעות"]]},
+ {id:"K5",type:"sniper",pos:[637,422],sev:4,prob:.6,sources:[{k:"HUMINT",age:120,q:.8},{k:"SIGINT",age:50,q:.8}],
+  reasons:[["anomaly","דיווח על חוליה שנכנסה למבנה הבוקר"],["pattern","מבנה שולט ששימש לירי נק״ל בעבר"],["terrain","זווית ירי ישירה לאורך 80 מ׳ של הציר"]]},
+ {id:"K6",type:"sniper",pos:[727,452],sev:4,prob:.2,sources:[{k:"ALGO",age:300,q:.6}],
+  reasons:[["terrain","חלון פינתי עם קו ראייה חלקי"],["pattern","התאמה חלשה לדפוס היסטורי"],["anomaly","מידע ישן (5 שעות) ממקור יחיד"]]},
+ {id:"K7",type:"sniper",pos:[842,447],sev:4,prob:.4,sources:[{k:"SIGINT",age:80,q:.75}],
+  reasons:[["anomaly","פעילות חריגה בסביבת המבנה"],["terrain","שולט על הכניסה למתחם היעד"],["pattern","סמיכות למטרה מוכרת"]]},
+ {id:"K8",type:"ied_side",pos:[577,417],sev:5,indicator:"blue_barrel",sources:[{k:"ALGO",age:30,q:.8}],
+  reasons:[["anomaly","זיהוי אוטומטי: חבית כחולה בשולי הציר שלא הופיעה אתמול"],["pattern","אינדיקטור ״חבית כחולה״ סומן ״נקי״ במקרים קודמים – משקלו הופחת"],["terrain","רוחב הציר מאפשר מעקף של 4 מ׳"]]},
+ {id:"K9",type:"observation",pos:[100,600],sev:3,prob:.5,sources:[{k:"VISINT",age:100,q:.8}],reasons:[]},
+ {id:"K10",type:"atgm",pos:[900,60],sev:5,prob:.4,sources:[{k:"HUMINT",age:200,q:.7}],reasons:[]},
+ {id:"K11",type:"sniper",pos:[657,442],sev:4,prob:.5,sources:[{k:"ALGO",age:900,q:.7}],reasons:[]},
+ {id:"K12",type:null,cell:null,sources:[],reasons:[]},
+ {id:"K13",type:"drone",pos:[150,550],sev:3,prob:.3,sources:[{k:"ALGO",age:400,q:.6}],reasons:[]},
+ {id:"K14",type:"sniper",pos:[637,422],sev:4,prob:.6,dupOf:"K5",sources:[{k:"HUMINT",age:130,q:.8}],reasons:[]},
+ {id:"K15",type:"ied_side",pos:[950,600],sev:5,prob:.3,sources:[{k:"ALGO",age:60,q:.7}],reasons:[]},
+ {id:"K16",type:"sniper",cell:null,sources:[{k:"SIGINT",age:20,q:.5}],reasons:[]}
+];
+const KHAN_LIVE={id:"KN1",type:"drone",pos:[627,347],sev:3,prob:.5,live:true,sources:[{k:"HUMINT",age:0,q:.85}],
+  reasons:[["anomaly","דיווח חי מכוח שכן: רחפן מרחף מעל הסמטאות"],["pattern","שימוש ברחפני תקיפה בגזרה בשבוע האחרון"],["terrain","סמטאות וחצרות פתוחות למעלה – אין כיסוי עילי"]]};
+const STREET_HE={"Jamal Abd al-Nasser":"רח׳ ג׳מאל עבד א-נאצר","Sharia Al-Seka":"רח׳ א-סכה","Sharia Al-Bahr":"רח׳ אל-בחר","Al Sonya St.":"רח׳ א-סוניה","Sharia Al-Quds":"רח׳ אל-קודס","Jalal St.":"רח׳ ג׳לאל"};
+
+/* ============ בניית מרחבים ============ */
+const AREAS={};
+AREAS.schematic={id:"schematic",name:"תרחיש סכמטי – ״חומת אש״",sub:"מבצע ״חומת אש״ · העיר העתיקה (סכמטי) · פלוגת החוד",
+  cell:20,map:SCHEM_MAP,bid:null,breach:false,ter:{},origin:[1,10],dest:[28,10],oName:"אלפא",dName:"בראבו",
+  threats:SCHEM_THREATS,live:SCHEM_LIVE,
+  labels:[{x:300,y:203,t:"הרחוב המרכזי",s:11},{x:200,y:258,t:"חצרות פנימיות",s:10},{x:490,y:300,t:"בית קפיצה",s:10,c:"#ffcf8a"}],
+  mission:"המשימה: מנקודת היערכות ״אלפא״ למתחם ״בראבו״ (600 מ׳ בשטח בנוי). כוח מצומצם – אין מספיק קנים לאבטחת כל חלון."};
+
+function pip(x,y,p){let ins=false;for(let i=0,j=p.length-2;i<p.length;j=i,i+=2){const xi=p[i],yi=p[i+1],xj=p[j],yj=p[j+1];if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)ins=!ins}return ins}
+function segDist(px,py,ax,ay,bx,by){const dx=bx-ax,dy=by-ay,l=dx*dx+dy*dy;let t=l?((px-ax)*dx+(py-ay)*dy)/l:0;t=Math.max(0,Math.min(1,t));const x=ax+t*dx-px,y=ay+t*dy-py;return Math.sqrt(x*x+y*y)}
+const ROAD_CLS={trunk:["=",8],primary:["=",8],secondary:["=",7],tertiary:["=",6],residential:[".",4],unclassified:[".",4],living_street:[".",4],service:[".",3.5],pedestrian:[".",3],footway:[".",2.5],path:[".",2.5],steps:[".",2.5],track:[".",3]};
+function rasterize(D,cell){
+  const W=Math.ceil(D.w/cell),H=Math.ceil(D.h/cell);
+  const g=new Array(W*H).fill("c"),bid=new Int32Array(W*H);
+  D.buildings.forEach((p,bi)=>{
+    let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(let i=0;i<p.length;i+=2){x0=Math.min(x0,p[i]);x1=Math.max(x1,p[i]);y0=Math.min(y0,p[i+1]);y1=Math.max(y1,p[i+1])}
+    for(let cy=Math.max(0,Math.floor(y0/cell));cy<=Math.min(H-1,Math.floor(y1/cell));cy++)
+      for(let cx=Math.max(0,Math.floor(x0/cell));cx<=Math.min(W-1,Math.floor(x1/cell));cx++)
+        if(pip((cx+.5)*cell,(cy+.5)*cell,p)){g[cy*W+cx]="#";bid[cy*W+cx]=bi+1}
+  });
+  for(const r of D.roads){
+    const rc=ROAD_CLS[r.c];if(!rc)continue;const ch=rc[0],hw=Math.max(rc[1],cell*.75);const p=r.p;
+    for(let i=0;i+3<p.length;i+=2){
+      const ax=p[i],ay=p[i+1],bx=p[i+2],by=p[i+3];
+      for(let cy=Math.max(0,Math.floor((Math.min(ay,by)-hw)/cell));cy<=Math.min(H-1,Math.floor((Math.max(ay,by)+hw)/cell));cy++)
+        for(let cx=Math.max(0,Math.floor((Math.min(ax,bx)-hw)/cell));cx<=Math.min(W-1,Math.floor((Math.max(ax,bx)+hw)/cell));cx++){
+          const k=cy*W+cx;if(g[k]==="="&&ch===".")continue;
+          if(segDist((cx+.5)*cell,(cy+.5)*cell,ax,ay,bx,by)<=hw){g[k]=ch;bid[k]=0}
+        }
+    }
+  }
+  const map=[];for(let y=0;y<H;y++)map.push(g.slice(y*W,y*W+W).join(""));
+  return {map,bid};
+}
+function streetLabels(D){ // תווית לכל רחוב בעל שם – על המקטע הארוך ביותר שבתוך התיחום
+  const best={},m=30,inside=(x,y)=>x>m&&y>m&&x<D.w-m&&y<D.h-m;
+  for(const r of D.roads){if(!r.n)continue;const p=r.p;
+    for(let i=0;i+3<p.length;i+=2){const ax=p[i],ay=p[i+1],bx=p[i+2],by=p[i+3];if(!inside(ax,ay)||!inside(bx,by))continue;
+      const L=Math.hypot(bx-ax,by-ay);if(!best[r.n]||L>best[r.n].L)best[r.n]={L,ax,ay,bx,by}}}
+  return Object.entries(best).filter(([,v])=>v.L>40).map(([n,v])=>{
+    let ang=Math.atan2(v.by-v.ay,v.bx-v.ax)*180/Math.PI;if(ang>90)ang-=180;if(ang<-90)ang+=180;
+    return {x:(v.ax+v.bx)/2,y:(v.ay+v.by)/2,t:STREET_HE[n]||n,s:10,rot:ang};
+  });
+}
+if(window.TIES_AREAS&&window.TIES_AREAS.khanYounis){
+  const D=window.TIES_AREAS.khanYounis,cell=5,R=rasterize(D,cell);
+  AREAS.khan={id:"khan",name:"חאן יונס – מרכז העיר (מפה אמיתית)",sub:"מרחב אמת: חאן יונס (OSM) · נתוני איום מדומים",
+    cell,map:R.map,bid:R.bid,breach:true,vector:D,bbox:D.bbox,
+    ter:{"=":{pass:true,spm:.4,exposed:1,name:"ציר ראשי"},"c":{pass:true,spm:.75,exposed:.3,name:"חצרות / שטח פתוח"}},
+    origin:[60,50],dest:[176,90],oName:"אלפא",dName:"בראבו",threats:KHAN_THREATS,live:KHAN_LIVE,labels:streetLabels(D),
+    mission:"המשימה: תנועה רגלית ממוצא ליעד במרכז חאן יונס. שכבת המפה אמיתית (OpenStreetMap); כל נתוני האיום מדומים."};
+}
+// הכנת איומים: pos במטרים → תא; איום ״בניין״ נקשר למזהה המבנה
+for(const a of Object.values(AREAS))for(const t of [...a.threats,a.live].filter(Boolean)){
+  if(t.pos)t.cell=[Math.floor(t.pos[0]/a.cell),Math.floor(t.pos[1]/a.cell)];
+  if(t.bld&&a.bid&&t.cell){const W=a.map[0].length;t.bid=a.bid[t.cell[1]*W+t.cell[0]]||0}
+}
 
 /* ============ מצב ושמירה מקומית (Offline-First) ============ */
 const LS="ties.mvp.v1";
 const clone=o=>JSON.parse(JSON.stringify(o));
-function freshPersist(){return {ind:clone(PRIOR.ind),src:clone(PRIOR.src),reports:[],syncLog:[],online:true,before:null}}
+function freshPersist(){return {ind:clone(PRIOR.ind),src:clone(PRIOR.src),reports:[],syncLog:[],online:true,before:null,area:"schematic",sat:false}}
 function load(){try{const v=JSON.parse(localStorage.getItem(LS));if(v&&v.ind&&v.src)return v}catch(e){}return freshPersist()}
 function save(){try{localStorage.setItem(LS,JSON.stringify(S.persist))}catch(e){}}
-const S={origin:[1,10],dest:[28,10],rifles:3,eng:false,stage:"plan",routes:[],visible:[],filt:null,selected:null,
-  threats:clone(BASE_THREATS),ingested:false,showFiltered:false,tapMode:null,tStart:0,decisionMs:null,segs:[],segIdx:0,
+const S={origin:null,dest:null,rifles:3,eng:false,stage:"plan",routes:[],visible:[],filt:null,selected:null,
+  threats:[],ingested:false,showFiltered:false,tapMode:null,tStart:0,decisionMs:null,segs:[],segIdx:0,
   tab:"mission",focus:null,persist:load()};
+
+/* מרחב פעיל */
+let A,MAP,W,H,CELL,BID,TER;
+function setArea(id){
+  A=AREAS[id]||AREAS.schematic;MAP=A.map;W=MAP[0].length;H=MAP.length;CELL=A.cell;BID=A.bid;
+  TER=Object.assign({},TER_BASE,A.ter);
+  Object.assign(S,{origin:A.origin.slice(),dest:A.dest.slice(),stage:"plan",routes:[],visible:[],selected:null,segs:[],segIdx:0,
+    decisionMs:null,ingested:false,threats:clone(A.threats),eng:false,focus:null,tapMode:null});
+  S.persist.area=A.id;save();
+}
 
 /* ============ עזרים ============ */
 const $=s=>document.querySelector(s);
@@ -204,25 +312,34 @@ const ter=c=>TER[MAP[c[1]][c[0]]];
 const pct=x=>Math.round(x*100)+"%";
 const mins=s=>Math.max(1,Math.round(s/60))+" דק׳";
 const LET={A:"א׳",B:"ב׳"};
-const passable=c=>c[0]>=0&&c[1]>=0&&c[0]<W&&c[1]<H&&ter(c).pass;
+const inb=c=>c[0]>=0&&c[1]>=0&&c[0]<W&&c[1]<H;
+const passable=c=>inb(c)&&ter(c).pass;
 const cheb=(a,b)=>Math.max(Math.abs(a[0]-b[0]),Math.abs(a[1]-b[1]));
+const U=()=>W*CELL/600; // קנה מידה לסמלים במפה
 function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),3200)}
 const mean=s=>s.a/(s.a+s.b);
 
 /* ============ מנוע מסלולים (Pathfinding & Risk Trade-off) ============ */
+function hPush(h,x){h.push(x);let i=h.length-1;while(i>0){const p=(i-1)>>1;if(h[p][0]<=h[i][0])break;[h[p],h[i]]=[h[i],h[p]];i=p}}
+function hPop(h){const top=h[0],last=h.pop();if(h.length){h[0]=last;let i=0;for(;;){const l=2*i+1,r=l+1;let m=i;if(l<h.length&&h[l][0]<h[m][0])m=l;if(r<h.length&&h[r][0]<h[m][0])m=r;if(m===i)break;[h[m],h[i]]=[h[i],h[m]];i=m}}return top}
+// זמן מעבר בין שני תאים סמוכים (כולל פריצה בכניסה למבנה)
+function stepSec(fi,ni){const ch=MAP[(ni/W)|0][ni%W];let s=TER[ch].spm*CELL;if(ch==="#"&&BID&&BID[ni]!==BID[fi])s+=BREACH;return s}
 function dijkstra(a,b,o){
-  const dist=new Map([[key(a),0]]),prev=new Map(),done=new Set(),open=[[0,a]];
-  while(open.length){
-    open.sort((x,y)=>x[0]-y[0]);const [d,c]=open.shift();const ck=key(c);
-    if(done.has(ck))continue;done.add(ck);if(ck===key(b))break;
+  const N=W*H,dist=new Float64Array(N).fill(Infinity),prev=new Int32Array(N).fill(-1),done=new Uint8Array(N);
+  const ai=a[1]*W+a[0],bi=b[1]*W+b[0];dist[ai]=0;const h=[[0,ai]];const k=CELL/20;
+  while(h.length){
+    const [d,i]=hPop(h);if(done[i])continue;done[i]=1;if(i===bi)break;
+    const x=i%W,y=(i/W)|0;
     for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
-      const n=[c[0]+dx,c[1]+dy];if(!passable(n))continue;const nk=key(n);if(done.has(nk))continue;
-      const t=ter(n);const w=t.sec+(o.exp||0)*t.exposed+(o.avoid&&o.avoid.has(nk)?o.avoidPen:0);
-      if(d+w<(dist.get(nk)??Infinity)){dist.set(nk,d+w);prev.set(nk,c);open.push([d+w,n])}
+      const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=W||ny>=H)continue;const ni=ny*W+nx;if(done[ni])continue;
+      const ch=MAP[ny][nx],t=TER[ch];if(!t.pass&&!(ch==="#"&&o.breach&&A.breach))continue;
+      const w=stepSec(i,ni)+(o.exp||0)*t.exposed*k+(o.avoid&&o.avoid[ni]?o.avoidPen*k:0);
+      if(d+w<dist[ni]){dist[ni]=d+w;prev[ni]=i;hPush(h,[d+w,ni])}
     }
   }
-  if(!dist.has(key(b)))return null;
-  const path=[b];let cur=b;while(key(cur)!==key(a)){cur=prev.get(key(cur));path.unshift(cur)}return path;
+  if(dist[bi]===Infinity)return null;
+  const path=[];for(let i=bi;;i=prev[i]){path.unshift([i%W,(i/W)|0]);if(i===ai)break}
+  return path;
 }
 
 /* ============ מנוע אמינות והסברתיות ============ */
@@ -231,11 +348,15 @@ function conf(t){ // היתוך מקורות: אמינות סוג המקור × 
   let miss=1;for(const s of t.sources){miss*=1-mean(S.persist.src[s.k])*s.q*Math.exp(-s.age/360)}return 1-miss;
 }
 const prob=t=>t.indicator?mean(S.persist.ind[t.indicator]):t.prob;
+const rCells=t=>Math.round((TYPES[t.type].rm||0)/CELL);
 function exposure(t,cells){
   const T=TYPES[t.type];if(!T||!t.cell)return 0;
-  if(T.kind==="point")return cells.some(c=>c[0]===t.cell[0]&&c[1]===t.cell[1])?1:0;
-  const r=t.r||T.r;let s=0;
-  for(const c of cells)if(cheb(c,t.cell)<=r)s+=T.kind==="area"?.15:.25*ter(c).exposed;
+  if(T.kind==="point"){
+    if(t.bid&&BID)return cells.some(c=>BID[c[1]*W+c[0]]===t.bid)?1:0;
+    const pr=CELL<20?1:0;return cells.some(c=>cheb(c,t.cell)<=pr)?1:0;
+  }
+  const r=rCells(t),k=CELL/20;let s=0;
+  for(const c of cells)if(cheb(c,t.cell)<=r)s+=T.kind==="area"?.15*k:.25*k*ter(c).exposed;
   return Math.min(1,s);
 }
 function confInfo(t,c){
@@ -251,7 +372,7 @@ function filterThreats(corridor){
     if(!t.type||!t.cell){f.empty++;continue}
     if(t.dupOf){f.dup++;continue}
     if(minAge(t)>720){f.expired++;continue}
-    const r=(t.r||TYPES[t.type].r||0)+2;
+    const r=rCells(t)+Math.max(2,Math.round(40/CELL));
     if(!corridor.some(c=>cheb(c,t.cell)<=r)){f.out++;continue}
     vis.push(t);
   }
@@ -259,11 +380,12 @@ function filterThreats(corridor){
 }
 function evalRoute(path,opt){
   const R={path,dist:(path.length-1)*CELL,items:[],extra:0,engUsed:false};
-  let t=0;path.forEach((c,i)=>{if(i)t+=ter(c).sec});
+  let t=0;for(let i=1;i<path.length;i++)t+=stepSec(path[i-1][1]*W+path[i-1][0],path[i][1]*W+path[i][0]);
   for(const th of S.visible){
     const e=exposure(th,path);if(e<=0)continue;
     const p=prob(th),c=conf(th);
-    const idx=path.findIndex(x=>cheb(x,th.cell)<=(th.r||TYPES[th.type].r||0));
+    const reach=TYPES[th.type].kind==="point"?(CELL<20?1:0):rCells(th);
+    let idx=th.bid&&BID?path.findIndex(x=>BID[x[1]*W+x[0]]===th.bid):path.findIndex(x=>cheb(x,th.cell)<=reach);
     R.items.push({th,e,p,c,at:Math.max(0,idx)*CELL,base:p*e*(th.sev/5)*(.5+.5*c)});
   }
   const los=R.items.filter(i=>TYPES[i.th.type].kind==="los").sort((a,b)=>b.base-a.base);
@@ -279,18 +401,21 @@ function evalRoute(path,opt){
   R.items.sort((a,b)=>b.q-a.q);
   R.losN=los.length;R.rifUsed=Math.min(opt.rifles,los.length);R.uncovered=Math.max(0,los.length-opt.rifles);
   R.hasDoor=R.items.some(i=>i.th.type==="ied_door");
-  const cnt={};path.forEach(c=>{const n=MAP[c[1]][c[0]];cnt[n]=(cnt[n]||0)+1});
-  R.name=cnt.J?"ציר עקיף – חצרות פנימיות ובית קפיצה":(cnt["="]||0)/path.length>.5?"ציר ראשי – הרחוב המרכזי":"ציר משני – רחובות צדדיים";
+  const cnt={},bids=new Set();path.forEach(c=>{const n=MAP[c[1]][c[0]];cnt[n]=(cnt[n]||0)+1;if(n==="#"&&BID)bids.add(BID[c[1]*W+c[0]])});
+  R.breached=[...bids];
+  R.name=(cnt.J||bids.size)?"ציר עקיף – חצרות ובית קפיצה":(cnt["="]||0)/path.length>.5?"ציר ראשי – "+(A.id==="khan"?"רחוב ראשי":"הרחוב המרכזי"):"ציר משני – רחובות וסמטאות";
   return R;
 }
 function planRoutes(){
+  const t0=performance.now();
   const r1=dijkstra(S.origin,S.dest,{});
   if(!r1){toast("לא נמצא ציר עביר בין הנקודות");return}
-  const r2=dijkstra(S.origin,S.dest,{exp:45,avoid:new Set(r1.map(key)),avoidPen:30});
+  const avoid=new Uint8Array(W*H);r1.forEach(c=>avoid[c[1]*W+c[0]]=1);
+  const r2=dijkstra(S.origin,S.dest,{exp:45,avoid,avoidPen:30,breach:true});
   S.routes=[{id:"A",path:r1}];
   if(r2){const s1=new Set(r1.map(key));const ov=r2.filter(c=>s1.has(key(c))).length/Math.max(r1.length,r2.length);if(ov<.85)S.routes.push({id:"B",path:r2})}
-  evaluate();S.stage="pending";S.selected=null;S.decisionMs=null;
-  render();toast(`אד״ן הושלם · הוצגו ${S.filt.shown} מתוך ${S.filt.total} אינדיקציות · הועבר לאישור קמ״ן`);
+  evaluate();S.stage="pending";S.selected=null;S.decisionMs=null;S.planMs=Math.round(performance.now()-t0);
+  render();toast(`אד״ן הושלם (${S.planMs} מ״ש) · הוצגו ${S.filt.shown} מתוך ${S.filt.total} אינדיקציות · הועבר לאישור קמ״ן`);
 }
 function evaluate(){
   if(!S.routes.length)return;
@@ -328,6 +453,7 @@ function routeWhy(R){
   else b.push(`איום מרכזי: ${TYPES[top.th.type].name} – סבירות ${pct(top.p)}, אמינות ${confInfo(top.th,top.c).lv} (${pct(top.share)} מהסיכון).`);
   if(R.losN)b.push(`${R.losN} נקודות צליפה בקו ראייה לציר · ${R.rifUsed} מכוסות בחיפוי${R.uncovered?` · ${R.uncovered} ללא כיסוי`:""}.`);
   if(R.hasDoor)b.push(R.engUsed?"דורש צוות הנדסה לזיכוי מקדים.":"מחייב פריצה והתבססות בבית קפיצה.");
+  else if(R.breached.length)b.push(`מחייב פריצה דרך ${R.breached.length} מבנים.`);
   b.push(`${R.dist} מ׳ · ${mins(R.time)} · ${R.items.length} איומים בנתיב.`);
   return b;
 }
@@ -348,7 +474,7 @@ function report(st){
   const seg=S.segs[S.segIdx];if(!seg)return;
   const t0=performance.now();
   seg.st=st;
-  S.persist.reports.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),ts:Date.now(),route:S.selected,seg:seg.i,st,th:seg.th.map(t=>t.id),synced:false,proc:false});
+  S.persist.reports.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),ts:Date.now(),area:A.id,route:S.selected,seg:seg.i,st,th:seg.th.map(t=>t.id),synced:false,proc:false});
   save();S.segIdx++;
   if(S.segIdx>=S.segs.length)S.stage="arrived";
   render();
@@ -359,14 +485,14 @@ function trySync(){
   const P=S.persist;if(!P.online)return;
   const pend=P.reports.filter(r=>!r.synced);if(!pend.length)return;
   const last=P.syncLog.length?P.syncLog[P.syncLog.length-1].ts:0;
-  const payload={d:"EUD-07",since:last,r:pend.map(r=>[r.ts,r.route,r.seg,r.st,r.th.join("|")])};
+  const payload={d:"EUD-07",since:last,r:pend.map(r=>[r.ts,r.area||"",r.route,r.seg,r.st,r.th.join("|")])};
   const txt=JSON.stringify(payload);const bytes=new Blob([txt]).size;
   pend.forEach(r=>r.synced=true);
   P.syncLog.push({ts:Date.now(),n:pend.length,bytes,txt});if(P.syncLog.length>10)P.syncLog.shift();
   save();renderHeader();if(S.tab==="debrief")renderPanel();
   toast(`🔄 סנכרון Delta: ${pend.length} דיווחים · ${bytes} בייט בלבד`);
 }
-function setOnline(v){S.persist.online=v;save();renderHeader();if(v)trySync()}
+function setOnline(v){S.persist.online=v;save();renderHeader();renderMap();if(v)trySync()}
 
 /* ============ תחקיר: עדכון בייסיאני ============ */
 const means=o=>Object.fromEntries(Object.entries(o).map(([k,v])=>[k,mean(v)]));
@@ -374,7 +500,7 @@ function processDebrief(){
   const P=S.persist;const pend=P.reports.filter(r=>!r.proc);
   if(!pend.length){toast("אין דיווחים חדשים לעיבוד");return}
   P.before={ind:means(P.ind),src:means(P.src)};
-  const all=[...BASE_THREATS,LIVE_INTEL];
+  const all=Object.values(AREAS).flatMap(a=>[...a.threats,a.live].filter(Boolean));
   for(const r of pend){
     const pos=r.st==="verified"||r.st==="contact",neg=r.st==="clean";
     if(pos||neg)for(const id of r.th){
@@ -388,8 +514,22 @@ function processDebrief(){
   save();evaluate();render();toast(`עובדו ${pend.length} דיווחי שטח · משקלי האינדיקטורים והמקורות עודכנו`);
 }
 function simulateNeighbors(){
-  for(let i=0;i<3;i++)S.persist.reports.push({id:"nb"+Date.now()+i,ts:Date.now(),route:"-",seg:-1,st:"clean",th:["T8"],synced:true,proc:false,nb:true});
+  const bb=(A.threats.find(t=>t.indicator==="blue_barrel")||{id:"T8"}).id;
+  for(let i=0;i<3;i++)S.persist.reports.push({id:"nb"+Date.now()+i,ts:Date.now(),area:A.id,route:"-",seg:-1,st:"clean",th:[bb],synced:true,proc:false,nb:true});
   save();processDebrief();
+}
+
+/* ============ רקע לוויין (אופציונלי, רק כשיש רשת) ============ */
+function satTiles(){
+  const [s,w,n,e]=A.bbox,z=17,Z=2**z,lat0=(s+n)/2,kx=Math.cos(lat0*Math.PI/180)*111320,ky=110574;
+  const lx=lon=>(lon+180)/360*Z,ly=lat=>{const r=lat*Math.PI/180;return (1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*Z};
+  const xl=x=>x/Z*360-180,yl=y=>180/Math.PI*Math.atan(Math.sinh(Math.PI-2*Math.PI*y/Z));
+  let h="";
+  for(let ty=Math.floor(ly(n));ty<=Math.floor(ly(s));ty++)for(let tx=Math.floor(lx(w));tx<=Math.floor(lx(e));tx++){
+    const x0=(xl(tx)-w)*kx,x1=(xl(tx+1)-w)*kx,y0=(n-yl(ty))*ky,y1=(n-yl(ty+1))*ky;
+    h+=`<image href="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${ty}/${tx}" x="${x0.toFixed(1)}" y="${y0.toFixed(1)}" width="${(x1-x0).toFixed(1)}" height="${(y1-y0).toFixed(1)}" preserveAspectRatio="none"/>`;
+  }
+  return h;
 }
 
 /* ============ רינדור ============ */
@@ -400,62 +540,78 @@ function renderHeader(){
   $("#steps").innerHTML=STEPS.map((s,k)=>`<div class="step ${k<i?"done":k===i?"act":""}">${k<i?"✓ ":""}${k+1}. ${s}</div>`).join("");
   const n=$("#net");n.className="pill "+(S.persist.online?"on":"off");n.textContent=S.persist.online?"● מחובר (מוצפן)":"○ מנותק – Offline";
   $("#queue").textContent="⏳ "+S.persist.reports.filter(r=>!r.synced).length+" בתור";
-  $("#ingest").disabled=!S.routes.length||S.ingested;
+  $("#ingest").disabled=!S.routes.length||S.ingested||!A.live;
+  $("#sub").textContent=A.sub;
+  $("#areaSel").value=A.id;
+  $("#satWrap").style.display=A.vector?"":"none";
+  $("#attr").textContent=A.vector?"מפה: © OpenStreetMap contributors (ODbL)"+(S.persist.sat&&S.persist.online?" · תצלום: © Esri, Maxar, Earthstar Geographics":"")+" · כל נתוני האיום מדומים":"";
   updTimer();
 }
 function updTimer(){
   let ms=S.decisionMs??(S.stage==="approved"?Date.now()-S.tStart:null);
   const el=$("#timer");
-  if(ms==null){el.textContent="⏱ --:--";return}
+  if(ms==null){el.textContent="⏱ --:--";el.style.color="";return}
   const s=Math.floor(ms/1000);el.textContent=`⏱ ${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}${S.decisionMs!=null?" ✓":""}`;
   el.style.color=S.decisionMs!=null?(ms<300000?"var(--ok)":"var(--warn)"):"";
 }
-function svgEl(){return $("#map")}
+const svgEl=()=>$("#map");
+const cx=c=>c[0]*CELL+CELL/2,cy=c=>c[1]*CELL+CELL/2;
 function renderMap(){
-  let h="";
-  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
-    const ch=MAP[y][x];const f={"#":"var(--building)","=":"var(--main)",".":"var(--street)","c":"var(--court)","J":"var(--jump)"}[ch];
-    h+=`<rect x="${x*CELL}" y="${y*CELL}" width="${CELL}" height="${CELL}" fill="${f}" stroke="${ch==="#"?"var(--bstroke)":"none"}"/>`;
+  const u=U(),VW=W*CELL,VH=H*CELL;let h="";
+  const svg=svgEl();svg.setAttribute("viewBox",`0 0 ${VW} ${VH}`);
+  const sel=S.selected?route(S.selected):null;
+  if(A.vector){
+    const D=A.vector,sat=S.persist.sat&&S.persist.online;
+    h+=`<rect width="${VW}" height="${VH}" fill="var(--open)"/>`;
+    if(sat)h+=satTiles();
+    const pts=p=>{let s="";for(let i=0;i<p.length;i+=2)s+=p[i]+","+p[i+1]+" ";return s};
+    for(const minor of [true,false])for(const r of D.roads){const rc=ROAD_CLS[r.c];if(!rc||(rc[0]===".")!==minor)continue;
+      h+=`<polyline points="${pts(r.p)}" fill="none" stroke="${minor?"var(--street)":"var(--main)"}" stroke-opacity="${sat?.55:1}" stroke-width="${rc[1]*2}" stroke-linecap="round" stroke-linejoin="round"/>`}
+    const hot=new Set(S.routes.flatMap(r=>r.breached||[]));
+    D.buildings.forEach((p,i)=>{const j=hot.has(i+1);
+      h+=`<polygon points="${pts(p)}" fill="${j?"var(--jump)":sat?"none":"var(--building)"}" stroke="${j?"#ffcf8a":sat?"#ffffff55":"#3a4554"}" stroke-width="${j?1.5:.6}"/>`});
+  }else{
+    for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+      const ch=MAP[y][x];const f={"#":"var(--building)","=":"var(--main)",".":"var(--street)","c":"var(--court)","J":"var(--jump)"}[ch];
+      h+=`<rect x="${x*CELL}" y="${y*CELL}" width="${CELL}" height="${CELL}" fill="${f}" stroke="${ch==="#"?"var(--bstroke)":"none"}"/>`;
+    }
   }
-  h+=`<text x="300" y="203" fill="#c9d1d9" font-size="11" text-anchor="middle" opacity=".7">הרחוב המרכזי</text>`;
-  h+=`<text x="200" y="258" fill="#c9d1d9" font-size="10" text-anchor="middle" opacity=".6">חצרות פנימיות</text>`;
-  h+=`<text x="490" y="300" fill="#ffcf8a" font-size="10" text-anchor="middle">בית קפיצה</text>`;
-  h+=`<g opacity=".7"><line x1="20" y1="385" x2="120" y2="385" stroke="#c9d1d9" stroke-width="2"/><text x="70" y="380" fill="#c9d1d9" font-size="10" text-anchor="middle">100 מ׳</text></g>`;
-  h+=`<text x="580" y="22" fill="#c9d1d9" font-size="12" text-anchor="middle">▲ צ</text>`;
+  for(const l of A.labels)h+=`<text x="${l.x}" y="${l.y}" fill="${l.c||"#e6edf3"}" font-size="${l.s*u}" text-anchor="middle" opacity=".75" ${l.rot!=null?`transform="rotate(${l.rot.toFixed(1)} ${l.x} ${l.y})"`:""} style="paint-order:stroke" stroke="#0b0f14" stroke-width="${2*u}">${l.t}</text>`;
+  h+=`<g opacity=".8"><line x1="${20*u}" y1="${VH-15*u}" x2="${20*u+100}" y2="${VH-15*u}" stroke="#e6edf3" stroke-width="${2*u}"/><text x="${20*u+50}" y="${VH-20*u}" fill="#e6edf3" font-size="${10*u}" text-anchor="middle">100 מ׳</text></g>`;
+  h+=`<text x="${VW-20*u}" y="${22*u}" fill="#e6edf3" font-size="${12*u}" text-anchor="middle">▲ צ</text>`;
   // צירים
   const order=[...S.routes].sort((a,b)=>(a.id===S.selected)-(b.id===S.selected));
   for(const R of order){
-    const off=R.id==="A"?-3:3;const col=R.id==="A"?"var(--a)":"var(--b)";
+    const off=(R.id==="A"?-3:3)*u*(A.vector?.4:1);const col=R.id==="A"?"var(--a)":"var(--b)";
     const dim=S.selected&&S.selected!==R.id;const pend=S.stage==="pending";
-    const pts=R.path.map(c=>`${c[0]*CELL+10+off},${c[1]*CELL+10+off}`).join(" ");
-    h+=`<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="${S.selected===R.id?6:4}" stroke-linejoin="round" stroke-linecap="round" opacity="${dim?.18:pend?.55:.95}" ${pend?'stroke-dasharray="8 6"':""}/>`;
-    const m=R.path[Math.floor(R.path.length/2)];
-    if(!dim)h+=`<g><circle cx="${m[0]*CELL+10+off*4}" cy="${m[1]*CELL+10+off*5}" r="11" fill="${col}"/><text x="${m[0]*CELL+10+off*4}" y="${m[1]*CELL+14+off*5}" font-size="12" font-weight="700" text-anchor="middle" fill="#0b0f14">${R.letter}</text>${R.id===S.rec&&S.stage!=="pending"?`<text x="${m[0]*CELL+24+off*4}" y="${m[1]*CELL+14+off*5}" font-size="12">✅</text>`:""}</g>`;
+    const pts=R.path.map(c=>`${cx(c)+off},${cy(c)+off}`).join(" ");
+    h+=`<polyline points="${pts}" fill="none" stroke="#0b0f14" stroke-width="${(S.selected===R.id?9:7)*u*.8}" stroke-linejoin="round" stroke-linecap="round" opacity="${dim?.1:.5}"/>`;
+    h+=`<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="${(S.selected===R.id?6:4)*u*.8}" stroke-linejoin="round" stroke-linecap="round" opacity="${dim?.18:pend?.6:.95}" ${pend?`stroke-dasharray="${8*u} ${6*u}"`:""}/>`;
+    const m=R.path[Math.floor(R.path.length*(R.id==="A"?.4:.6))];
+    if(!dim)h+=`<g><circle cx="${cx(m)}" cy="${cy(m)}" r="${11*u}" fill="${col}" stroke="#0b0f14" stroke-width="${1.5*u}"/><text x="${cx(m)}" y="${cy(m)+4*u}" font-size="${12*u}" font-weight="700" text-anchor="middle" fill="#0b0f14">${R.letter}</text>${R.id===S.rec&&S.stage!=="pending"?`<text x="${cx(m)+16*u}" y="${cy(m)+4*u}" font-size="${12*u}">✅</text>`:""}</g>`;
   }
   // מקטעים בתנועה
   if(S.segs.length&&(S.stage==="moving"||S.stage==="arrived")){
     S.segs.forEach((sg,i)=>{const e=sg.cells[sg.cells.length-1];
       const col=sg.st?(sg.st==="clean"?"var(--ok)":sg.st==="bypass"?"var(--a)":"var(--bad)"):i===S.segIdx?"#fff":"#6e7681";
-      h+=`<circle cx="${e[0]*CELL+10}" cy="${e[1]*CELL+10}" r="7" fill="${col}" stroke="#0b0f14" stroke-width="2"/>`;
-      if(i===S.segIdx)h+=`<polyline points="${sg.cells.map(c=>`${c[0]*CELL+10},${c[1]*CELL+10}`).join(" ")}" fill="none" stroke="#fff" stroke-width="2" stroke-dasharray="3 4"/>`;
+      h+=`<circle cx="${cx(e)}" cy="${cy(e)}" r="${7*u}" fill="${col}" stroke="#0b0f14" stroke-width="${2*u}"/>`;
+      if(i===S.segIdx)h+=`<polyline points="${sg.cells.map(c=>`${cx(c)},${cy(c)}`).join(" ")}" fill="none" stroke="#fff" stroke-width="${2*u}" stroke-dasharray="${3*u} ${4*u}"/>`;
     });
   }
   // איומים
-  const sel=S.selected?route(S.selected):null;
   const list=S.showFiltered?S.threats.filter(t=>t.cell&&t.type):S.visible;
   for(const t of list){
-    const shown=S.visible.includes(t);const T=TYPES[t.type];const cx=t.cell[0]*CELL+10,cy=t.cell[1]*CELL+10;
+    const shown=S.visible.includes(t);const T=TYPES[t.type];const x=cx(t.cell),y=cy(t.cell);
     const it=sel&&sel.items.find(i=>i.th===t);
-    if(shown&&T.kind!=="point")h+=`<circle cx="${cx}" cy="${cy}" r="${(t.r||T.r)*CELL}" fill="${T.kind==="area"?"#a371f7":"#f85149"}" opacity="${S.focus===t.id?.16:.05}"/>`;
-    if(it&&it.cover)h+=`<circle cx="${cx}" cy="${cy}" r="13" fill="none" stroke="var(--ok)" stroke-width="2.5"/>`;
-    if(it&&it.eng)h+=`<circle cx="${cx}" cy="${cy}" r="13" fill="none" stroke="var(--ok)" stroke-width="2.5" stroke-dasharray="3 2"/>`;
-    h+=`<g class="thm" data-id="${t.id}" style="cursor:pointer" opacity="${shown?1:.3}"><circle cx="${cx}" cy="${cy}" r="10" fill="${shown?"#0b0f14":"#333"}" stroke="${S.focus===t.id?"#fff":t.live?"#a371f7":"#f85149"}" stroke-width="${S.focus===t.id?2.5:1.5}"/><text x="${cx}" y="${cy+4}" font-size="11" text-anchor="middle">${T.icon}</text></g>`;
+    if(shown&&T.kind!=="point")h+=`<circle cx="${x}" cy="${y}" r="${T.rm}" fill="${T.kind==="area"?"#a371f7":"#f85149"}" opacity="${S.focus===t.id?.16:.06}"/>`;
+    if(it&&(it.cover||it.eng))h+=`<circle cx="${x}" cy="${y}" r="${13*u}" fill="none" stroke="var(--ok)" stroke-width="${2.5*u}" ${it.eng?`stroke-dasharray="${3*u} ${2*u}"`:""}/>`;
+    h+=`<g class="thm" data-id="${t.id}" style="cursor:pointer" opacity="${shown?1:.35}"><circle cx="${x}" cy="${y}" r="${10*u}" fill="${shown?"#0b0f14":"#333"}" stroke="${S.focus===t.id?"#fff":t.live?"#a371f7":"#f85149"}" stroke-width="${(S.focus===t.id?2.5:1.5)*u}"/><text x="${x}" y="${y+4*u}" font-size="${11*u}" text-anchor="middle">${T.icon}</text></g>`;
   }
   // מוצא / יעד
-  const o=S.origin,d=S.dest,isDef=key(o)==="1,10"&&key(d)==="28,10";
-  h+=`<g><circle cx="${o[0]*CELL+10}" cy="${o[1]*CELL+10}" r="9" fill="var(--ok)" stroke="#fff" stroke-width="2"/><text x="${o[0]*CELL+10}" y="${o[1]*CELL-4}" font-size="11" fill="#fff" text-anchor="middle" font-weight="700">${isDef?"אלפא":"מוצא"}</text></g>`;
-  h+=`<g><rect x="${d[0]*CELL+1}" y="${d[1]*CELL+1}" width="18" height="18" rx="3" fill="var(--bad)" stroke="#fff" stroke-width="2"/><text x="${d[0]*CELL+10}" y="${d[1]*CELL-4}" font-size="11" fill="#fff" text-anchor="middle" font-weight="700">${isDef?"בראבו":"יעד"}</text></g>`;
-  const svg=svgEl();svg.innerHTML=h;svg.classList.toggle("tapmode",!!S.tapMode);
+  const o=S.origin,d=S.dest,isDef=key(o)===key(A.origin)&&key(d)===key(A.dest);
+  h+=`<g><circle cx="${cx(o)}" cy="${cy(o)}" r="${9*u}" fill="var(--ok)" stroke="#fff" stroke-width="${2*u}"/><text x="${cx(o)}" y="${cy(o)-13*u}" font-size="${11*u}" fill="#fff" text-anchor="middle" font-weight="700" style="paint-order:stroke" stroke="#0b0f14" stroke-width="${2*u}">${isDef?A.oName:"מוצא"}</text></g>`;
+  h+=`<g><rect x="${cx(d)-9*u}" y="${cy(d)-9*u}" width="${18*u}" height="${18*u}" rx="${3*u}" fill="var(--bad)" stroke="#fff" stroke-width="${2*u}"/><text x="${cx(d)}" y="${cy(d)-13*u}" font-size="${11*u}" fill="#fff" text-anchor="middle" font-weight="700" style="paint-order:stroke" stroke="#0b0f14" stroke-width="${2*u}">${isDef?A.dName:"יעד"}</text></g>`;
+  svg.innerHTML=h;svg.classList.toggle("tapmode",!!S.tapMode);
 }
 function meter(label,v,col){return `<div class="meter"><span style="min-width:62px">${label}</span><div class="bar"><i style="width:${Math.round(v*100)}%;background:${col}"></i></div><span>${pct(v)}</span></div>`}
 function threatHTML(it){
@@ -490,7 +646,7 @@ function matrixHTML(){
   <tr><th>איום מרכזי</th>${cell(r=>r.items[0]?`${TYPES[r.items[0].th.type].icon} ${TYPES[r.items[0].th.type].name} (${pct(r.items[0].p)})`:"—")}</tr>
   <tr><th>חוזק ואמינות המקור</th>${cell(r=>{const i=r.items[0];if(!i)return"—";const c=confInfo(i.th,i.c);return `${c.lv}<div class="muted">${c.d}</div>`})}</tr>
   <tr><th>סיכון משוקלל</th>${cell(r=>{const l=level(r.risk);return `<span class="lv ${l[1]}">${l[0]} · ${pct(r.risk)}</span>`})}</tr>
-  <tr><th>דרישת משאבים</th>${cell(r=>[r.losN?`${r.rifUsed} קנים לחיפוי`:"",r.uncovered?`${r.uncovered} חלונות לא מכוסים`:"",r.hasDoor?(r.engUsed?"צוות הנדסה":"פריצה לבית קפיצה"):""].filter(Boolean).join(" · ")||"—")}</tr>
+  <tr><th>דרישת משאבים</th>${cell(r=>[r.losN?`${r.rifUsed} קנים לחיפוי`:"",r.uncovered?`${r.uncovered} חלונות לא מכוסים`:"",r.hasDoor?(r.engUsed?"צוות הנדסה":"פריצה לבית קפיצה"):r.breached.length?`פריצה ל-${r.breached.length} מבנים`:""].filter(Boolean).join(" · ")||"—")}</tr>
   ${pend?"":`<tr><th>המלצת TIES</th>${cell(r=>r.id===S.rec?"<b style='color:var(--ok)'>✅ מומלץ</b>":"<b style='color:var(--bad)'>❌ לא מומלץ</b>")}</tr>`}
   </tbody></table>`;
 }
@@ -506,13 +662,13 @@ function routeCardHTML(R,withBtn){
 function missionHTML(){
   if(S.stage==="plan"){
     return `<div class="box"><h3>1. דקירת נקודת מוצא ויעד</h3>
-      <p class="muted" style="margin:0 0 8px">לחץ על כפתור ואז על תא עביר במפה (רחוב / חצר).</p>
-      <div class="row"><button data-act="tap-origin" class="${S.tapMode==="origin"?"primary":""}">📍 מוצא (${key(S.origin)})</button>
-      <button data-act="tap-dest" class="${S.tapMode==="dest"?"primary":""}">🎯 יעד (${key(S.dest)})</button>
+      <p class="muted" style="margin:0 0 8px">לחץ על כפתור ואז על נקודה עבירה במפה (רחוב / חצר).</p>
+      <div class="row"><button data-act="tap-origin" class="${S.tapMode==="origin"?"primary":""}">📍 מוצא</button>
+      <button data-act="tap-dest" class="${S.tapMode==="dest"?"primary":""}">🎯 יעד</button>
       <button class="ghost" data-act="reset-pts">איפוס לתרחיש</button></div></div>
       ${resourcesHTML()}
       <button class="primary" data-act="plan" style="width:100%;min-height:56px;font-size:17px">מיפוי סכנות וחישוב צירים</button>
-      <p class="muted">המשימה: מנקודת היערכות ״אלפא״ למתחם ״בראבו״ (600 מ׳ בשטח בנוי). כוח מצומצם – אין מספיק קנים לאבטחת כל חלון.</p>`;
+      <p class="muted">${A.mission}</p>`;
   }
   const f=S.filt;
   const filt=`<div class="muted" style="margin-bottom:10px">🔎 מוצגות <b>${f.shown}</b> מתוך ${f.total} אינדיקציות · סוננו: ${f.out} מחוץ למרחב, ${f.expired} פג תוקף, ${f.dup} כפילות, ${f.empty} ללא תוכן</div>`;
@@ -574,34 +730,36 @@ document.addEventListener("click",e=>{
   const tb=e.target.closest(".tabs button");if(tb){S.tab=tb.dataset.tab;render();return}
   const b=e.target.closest("[data-act]");if(!b)return;
   const a=b.dataset.act;
-  if(a==="tap-origin"||a==="tap-dest"){S.tapMode=S.tapMode===a.slice(4)?null:a.slice(4);render();if(S.tapMode)toast("לחץ על תא עביר במפה")}
-  else if(a==="reset-pts"){S.origin=[1,10];S.dest=[28,10];S.tapMode=null;render()}
+  if(a==="tap-origin"||a==="tap-dest"){S.tapMode=S.tapMode===a.slice(4)?null:a.slice(4);render();if(S.tapMode)toast("לחץ על נקודה עבירה במפה")}
+  else if(a==="reset-pts"){S.origin=A.origin.slice();S.dest=A.dest.slice();S.tapMode=null;render()}
   else if(a==="plan"){S.tapMode=null;planRoutes()}
   else if(a==="approve"){S.stage="approved";S.tStart=Date.now();render();toast("הצירים אושרו ע״י קמ״ן והופצו למכשיר הקצה")}
-  else if(a==="back"){S.stage="plan";S.routes=[];S.ingested=false;S.threats=clone(BASE_THREATS);render()}
+  else if(a==="back"){S.stage="plan";S.routes=[];S.ingested=false;S.threats=clone(A.threats);render()}
   else if(a==="rif-"||a==="rif+"){S.rifles=Math.max(0,Math.min(8,S.rifles+(a==="rif+"?1:-1)));evaluate();render()}
   else if(a==="eng-on"){S.eng=true;evaluate();render();toast("זיכוי הנדסי הוחל – ההמלצה חושבה מחדש")}
   else if(a==="choose"){S.selected=b.dataset.id;S.decisionMs=Date.now()-S.tStart;S.segs=buildSegs(route(S.selected).path);S.segIdx=0;S.stage="moving";render();
     toast(`נבחר ציר ${LET[S.selected]}${S.selected===S.rec?" (בהתאם להמלצה)":" (בניגוד להמלצה – נרשם)"}`)}
   else if(a==="fb")report(b.dataset.st);
   else if(a==="to-debrief"){S.tab="debrief";render()}
-  else if(a==="new"){Object.assign(S,{stage:"plan",routes:[],selected:null,segs:[],segIdx:0,decisionMs:null,ingested:false,threats:clone(BASE_THREATS),eng:false,focus:null});render()}
+  else if(a==="new"){setArea(A.id);render()}
   else if(a==="process")processDebrief();
   else if(a==="neighbors")simulateNeighbors();
-  else if(a==="wipe"){S.persist=freshPersist();save();evaluate();render();toast("נתוני הלמידה אופסו")}
+  else if(a==="wipe"){const ar=A.id;S.persist=freshPersist();S.persist.area=ar;save();evaluate();render();toast("נתוני הלמידה אופסו")}
 });
 document.addEventListener("change",e=>{
   if(e.target.id==="eng"){S.eng=e.target.checked;evaluate();render()}
   if(e.target.id==="showFiltered"){S.showFiltered=e.target.checked;renderMap()}
+  if(e.target.id==="sat"){S.persist.sat=e.target.checked;save();renderHeader();renderMap()}
+  if(e.target.id==="areaSel"){setArea(e.target.value);S.tab="mission";render();toast("מרחב פעולה: "+A.name)}
 });
 $("#net").onclick=()=>setOnline(!S.persist.online);
 $("#ingest").onclick=()=>{
-  if(S.ingested||!S.routes.length)return;
+  if(S.ingested||!S.routes.length||!A.live)return;
   const before=Object.fromEntries(S.routes.map(r=>[r.id,r.risk]));const oldRec=S.rec;
-  S.threats.push(clone(LIVE_INTEL));S.ingested=true;evaluate();
-  const hit=S.routes.filter(r=>r.items.some(i=>i.th.id==="N1"));
-  S.focus="N1";render();
-  toast(hit.length?`📡 ידיעה חיה: ${TYPES.drone.name} · ציר ${hit.map(r=>`${r.letter}: ${pct(before[r.id])}→${pct(r.risk)}`).join(", ")}${S.rec!==oldRec?" · ההמלצה השתנתה!":""}`:"📡 ידיעה חדשה התקבלה – אינה משפיעה על הצירים (סוננה)");
+  S.threats.push(clone(A.live));S.ingested=true;evaluate();
+  const hit=S.routes.filter(r=>r.items.some(i=>i.th.id===A.live.id));
+  S.focus=A.live.id;render();
+  toast(hit.length?`📡 ידיעה חיה: ${TYPES[A.live.type].name} · ציר ${hit.map(r=>`${r.letter}: ${pct(before[r.id])}→${pct(r.risk)}`).join(", ")}${S.rec!==oldRec?" · ההמלצה השתנתה!":""}`:"📡 ידיעה חדשה התקבלה – אינה משפיעה על הצירים (סוננה)");
 };
 svgEl().addEventListener("click",e=>{
   const m=e.target.closest(".thm");
@@ -609,12 +767,15 @@ svgEl().addEventListener("click",e=>{
   if(!S.tapMode)return;
   const svg=svgEl(),pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;
   const p=pt.matrixTransform(svg.getScreenCTM().inverse());const c=[Math.floor(p.x/CELL),Math.floor(p.y/CELL)];
-  if(!passable(c)){toast("תא לא עביר – בחר רחוב או חצר");return}
+  if(!passable(c)){toast("נקודה לא עבירה – בחר רחוב או חצר");return}
   if(S.tapMode==="origin")S.origin=c;else S.dest=c;S.tapMode=null;render();
 });
 window.addEventListener("online",()=>setOnline(true));
 window.addEventListener("offline",()=>setOnline(false));
 setInterval(()=>{if(S.stage==="approved")updTimer()},1000);
+$("#areaSel").innerHTML=Object.values(AREAS).map(a=>`<option value="${a.id}">${a.name}</option>`).join("");
+$("#sat").checked=!!S.persist.sat;
+setArea(S.persist.area);
 render();
 </script>
 </body>
