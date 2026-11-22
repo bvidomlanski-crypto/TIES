@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>TIES – הסברתיות מודיעין טקטית</title>
+<style>
+:root{
+  --bg:#0b0f14;--panel:#131a22;--panel2:#1a232e;--line:#283442;--text:#e6edf3;--muted:#8d9aab;
+  --a:#3fb6ff;--b:#ffb347;--ok:#3fb950;--warn:#e3b341;--bad:#f85149;--accent:#4cc2ff;
+  --building:#252d38;--bstroke:#1c232c;--street:#46505f;--main:#5a6476;--court:#33402f;--jump:#7a5522;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:"Segoe UI",Arial,"Noto Sans Hebrew",sans-serif;font-size:15px}
+button{font:inherit;color:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel2);border-radius:10px;padding:10px 14px;min-height:44px}
+button:hover{border-color:#3b4a5c}
+button.primary{background:#1f6feb;border-color:#1f6feb;font-weight:600}
+button.ghost{background:transparent}
+button:disabled{opacity:.45;cursor:not-allowed}
+header{display:flex;align-items:center;gap:12px;padding:8px 14px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:10px}
+.brand b{font-size:22px;letter-spacing:2px;color:var(--accent)}
+.brand span{color:var(--muted);font-size:13px}
+.hdr-sp{flex:1}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);font-size:13px;min-height:32px}
+.pill.on{color:var(--ok);border-color:#2a5a33}.pill.off{color:var(--bad);border-color:#6b2b2b}
+.steps{display:flex;gap:4px;padding:8px 14px;border-bottom:1px solid var(--line);overflow-x:auto;background:var(--panel)}
+.step{flex:1;min-width:110px;font-size:12px;padding:6px 8px;border-radius:8px;color:var(--muted);border:1px solid transparent;white-space:nowrap;text-align:center}
+.step.done{color:var(--ok)}.step.act{color:var(--text);border-color:var(--accent);background:#10263a}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 440px;height:calc(100% - 112px)}
+.mapwrap{position:relative;padding:12px;overflow:auto}
+svg#map{width:100%;height:auto;max-height:100%;display:block;background:#0f141a;border-radius:12px;border:1px solid var(--line);touch-action:manipulation}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:middle;margin-left:4px}
+aside{border-right:1px solid var(--line);background:var(--panel);overflow-y:auto;padding:12px}
+.tabs{display:flex;gap:6px;margin-bottom:12px}
+.tabs button{flex:1}
+.tabs button.act{border-color:var(--accent);background:#10263a}
+.box{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}
+.box h3{margin:0 0 8px;font-size:15px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.muted{color:var(--muted);font-size:13px}
+.stepper{display:flex;align-items:center;gap:6px}
+.stepper button{min-width:44px;padding:6px}
+.stepper b{min-width:28px;text-align:center;font-size:18px}
+table.mx{width:100%;border-collapse:collapse;font-size:13px}
+table.mx th,table.mx td{border-bottom:1px solid var(--line);padding:7px 5px;text-align:right;vertical-align:top}
+table.mx th{color:var(--muted);font-weight:500;width:28%}
+table.mx thead td{font-weight:700}
+.lv{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700}
+.lv.ok{background:#173a22;color:#56d364}.lv.warn{background:#3d3112;color:#e3b341}.lv.bad{background:#47191a;color:#ff7b72}
+.rec{border-color:#2a5a33;background:#11241a}
+.rec p{margin:6px 0;line-height:1.5}
+.gate{border-color:#6b5a1e;background:#2a2410}
+.rcard{border-width:2px}
+.rcard.A{border-color:color-mix(in srgb,var(--a) 55%,transparent)}
+.rcard.B{border-color:color-mix(in srgb,var(--b) 55%,transparent)}
+.rhead{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.dot{width:12px;height:12px;border-radius:50%;display:inline-block}
+.th{border-top:1px solid var(--line);padding:10px 0}
+.th.focus{background:#10263a;margin:0 -8px;padding:10px 8px;border-radius:8px}
+.th-h{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.th-h .ic{font-size:18px}
+.th-h .contrib{margin-inline-start:auto;font-size:12px;color:var(--muted)}
+.meter{display:flex;align-items:center;gap:6px;font-size:12px;margin-top:6px}
+.meter .bar{flex:0 0 90px;height:7px;background:#0b0f14;border-radius:4px;overflow:hidden}
+.meter .bar i{display:block;height:100%}
+.why{margin:8px 0 0;padding:0;list-style:none;font-size:13px;line-height:1.45}
+.why li{margin:4px 0;padding-inline-start:22px;position:relative}
+.why li span{position:absolute;inset-inline-start:0}
+.mit{font-size:12px;margin-top:6px;padding:4px 8px;border-radius:6px;display:inline-block}
+.mit.ok{background:#173a22;color:#56d364}.mit.bad{background:#47191a;color:#ff7b72}.mit.info{background:#10263a;color:#79c0ff}
+.fb{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.fb button{min-height:64px;font-size:16px;font-weight:600}
+.fb .c1{background:#173a22;border-color:#2a5a33}.fb .c2{background:#47191a;border-color:#6b2b2b}
+.fb .c3{background:#10263a;border-color:#1f4a70}.fb .c4{background:#3d3112;border-color:#6b5a1e}
+.chip{display:inline-block;font-size:12px;padding:2px 8px;border-radius:999px;background:#0b0f14;border:1px solid var(--line);margin:2px}
+.seglist div{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px dashed var(--line)}
+table.db{width:100%;border-collapse:collapse;font-size:13px}
+table.db td,table.db th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:right}
+.up{color:var(--bad)}.down{color:var(--ok)}
+pre{white-space:pre-wrap;word-break:break-all;background:#0b0f14;padding:8px;border-radius:8px;font-size:11px;direction:ltr;text-align:left;max-height:140px;overflow:auto}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1f2b38;border:1px solid var(--accent);padding:10px 16px;border-radius:10px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:9;max-width:90vw;text-align:center}
+#toast.show{opacity:1}
+.tapmode{outline:2px dashed var(--accent);outline-offset:-2px}
+@media (max-width:900px){
+  .layout{grid-template-columns:1fr;height:auto}
+  aside{border-right:0;border-top:1px solid var(--line)}
+  .mapwrap{padding:8px 16px}
+  aside{padding:12px 16px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><b>TIES</b><span>מבצע ״חומת אש״ · העיר העתיקה · פלוגת החוד</span></div>
+  <div class="hdr-sp"></div>
+  <span id="timer" class="pill" title="זמן קבלת החלטה">⏱ --:--</span>
+  <span id="queue" class="pill" title="דיווחים בתור לסנכרון">⏳ 0</span>
+  <button id="net" class="pill on" title="הדמיית תקשורת">● מחובר</button>
+  <button id="ingest" class="pill" title="קליטת ידיעה חיה" disabled>📡 ידיעה חדשה</button>
+</header>
+<nav class="steps" id="steps"></nav>
+<div class="layout">
+  <section class="mapwrap">
+    <svg id="map" viewBox="0 0 600 400" role="img" aria-label="מפת גזרה"></svg>
+    <div class="legend">
+      <span><i style="background:var(--main)"></i>רחוב ראשי</span>
+      <span><i style="background:var(--street)"></i>רחוב צדדי</span>
+      <span><i style="background:var(--court)"></i>חצר פנימית</span>
+      <span><i style="background:var(--jump)"></i>בית קפיצה</span>
+      <span><i style="background:var(--building)"></i>מבנה</span>
+      <span>🎯 צליפה · 💣 מטען · 🛸 רחפן · 👁 תצפית · 🚀 נ״ט</span>
+      <label><input type="checkbox" id="showFiltered"> הצג אינדיקציות שסוננו</label>
+    </div>
+  </section>
+  <aside>
+    <div class="tabs">
+      <button data-tab="mission" class="act">משימה</button>
+      <button data-tab="debrief">תחקיר ולמידה</button>
+    </div>
+    <div id="panel"></div>
+  </aside>
+</div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* ============ שכבת המפה (נתונים מדומים) ============ */
+const W=30,H=20,CELL=20; // כל תא = 20 מ׳ → 600 מ׳ רוחב גזרה
+const MAP=[];
+for(let r=0;r<H;r++){
+  if(r===9||r===10) MAP.push("=".repeat(W));
+  else if(r===12) MAP.push("####.cccccccccc.ccccccccJ.####");
+  else if(r===13) MAP.push("####.cccccccccc.cccccccc#.####");
+  else MAP.push("####.##########.#########.####");
+}
+// sec = זמן מעבר תא (שניות), exposed = חשיפה לקווי ראייה
+const TER={
+  "#":{pass:false,name:"מבנה"},
+  "=":{pass:true,sec:8,exposed:1,name:"הרחוב המרכזי"},
+  ".":{pass:true,sec:9,exposed:.6,name:"רחוב צדדי"},
+  "c":{pass:true,sec:14,exposed:.05,name:"חצרות פנימיות"},
+  "J":{pass:true,sec:180,exposed:0,name:"בית קפיצה"}
+};
+const TYPES={
+  ied_door:{name:"מטען פתח",icon:"💣",kind:"point"},
+  ied_side:{name:"מטען צד",icon:"💣",kind:"point"},
+  sniper:{name:"צליפה מחלון שולט",icon:"🎯",kind:"los",r:3},
+  observation:{name:"תצפית אויב",icon:"👁",kind:"los",r:3},
+  atgm:{name:"עמדת נ״ט",icon:"🚀",kind:"los",r:4},
+  drone:{name:"איום רחפנים",icon:"🛸",kind:"area",r:3}
+};
+const RICON={pattern:"📈",anomaly:"⚠️",terrain:"⛰️"};
+/* מקורות: הלוחם לעולם אינו רואה את סוג המקור – רק ציון אמינות מופשט */
+const PRIOR={
+  ind:{door_jump:{a:22,b:3,label:"מטען פתח בבית קפיצה (תבנית)"},blue_barrel:{a:2,b:6,label:"חבית כחולה בשולי ציר"}},
+  src:{VISINT:{a:8,b:2,label:"חוזי"},HUMINT:{a:7,b:3,label:"יומינט"},SIGINT:{a:13,b:7,label:"סיגינט"},ALGO:{a:9,b:11,label:"זיהוי אלגוריתמי"}}
+};
+const BASE_THREATS=[
+ {id:"T1",type:"ied_door",cell:[24,12],sev:5,indicator:"door_jump",sources:[{k:"HUMINT",age:40,q:.95},{k:"VISINT",age:25,q:.95}],
+  reasons:[["anomaly","צילום עדכני (לפני 25 דק׳) מראה שינוי בפתח הכניסה לעומת צילום קודם"],["pattern","תבנית: 3 אירועי מטען פתח בבתי קפיצה בגזרה ב-30 הימים האחרונים"],["terrain","צוואר בקבוק: מעבר יחיד בין החצרות לרחוב – אין כניסה חלופית למבנה"]]},
+ {id:"T2",type:"sniper",cell:[6,8],sev:4,prob:.3,sources:[{k:"ALGO",age:90,q:.8}],
+  reasons:[["terrain","חלון בקומה 3 עם קו ראייה לכל רוחב הרחוב"],["pattern","2 אירועי צליפה ממבנה זה בעבר"],["anomaly","תריס שנפתח בשעה חריגה – לא אומת"]]},
+ {id:"T3",type:"sniper",cell:[10,11],sev:4,prob:.55,sources:[{k:"VISINT",age:60,q:.85},{k:"ALGO",age:30,q:.8}],
+  reasons:[["anomaly","זוהתה תנועה חוזרת מאחורי החלון בשעה האחרונה"],["terrain","חלון שולט על צומת – מכסה 60 מ׳ מהציר"],["pattern","עמדת ירי שתועדה במבצע קודם"]]},
+ {id:"T4",type:"sniper",cell:[13,8],sev:4,prob:.25,sources:[{k:"ALGO",age:200,q:.7}],
+  reasons:[["terrain","חלון גבוה מעל קשת המעבר"],["pattern","דפוס כללי: מבנים בני 4 קומות לאורך הרחוב"],["anomaly","אין אינדיקציה טרייה – מידע בן 3 שעות"]]},
+ {id:"T5",type:"sniper",cell:[18,11],sev:4,prob:.6,sources:[{k:"HUMINT",age:120,q:.8},{k:"SIGINT",age:50,q:.8}],
+  reasons:[["anomaly","דיווח על חוליה שנכנסה למבנה הבוקר"],["pattern","מבנה שולט ששימש לירי נק״ל בעבר"],["terrain","זווית ירי ישירה לאורך 80 מ׳ של הציר"]]},
+ {id:"T6",type:"sniper",cell:[21,8],sev:4,prob:.2,sources:[{k:"ALGO",age:300,q:.6}],
+  reasons:[["terrain","חלון פינתי עם קו ראייה חלקי"],["pattern","התאמה חלשה לדפוס היסטורי"],["anomaly","מידע ישן (5 שעות) ממקור יחיד"]]},
+ {id:"T7",type:"sniper",cell:[23,11],sev:4,prob:.4,sources:[{k:"SIGINT",age:80,q:.75}],
+  reasons:[["anomaly","פעילות חריגה בסביבת המבנה"],["terrain","שולט על הכניסה למתחם היעד"],["pattern","סמיכות למטרה מוכרת"]]},
+ {id:"T8",type:"ied_side",cell:[8,10],sev:5,indicator:"blue_barrel",sources:[{k:"ALGO",age:30,q:.8}],
+  reasons:[["anomaly","זיהוי אוטומטי: חבית כחולה בשולי הציר שלא הופיעה אתמול"],["pattern","אינדיקטור ״חבית כחולה״ סומן ״נקי״ במקרים קודמים – משקלו הופחת"],["terrain","רוחב הרחוב מאפשר מעקף של 4 מ׳"]]},
+ // אינדיקציות שיסוננו (רעש / לא רלוונטי)
+ {id:"T9",type:"observation",cell:[8,2],sev:3,prob:.5,sources:[{k:"VISINT",age:100,q:.8}],reasons:[]},
+ {id:"T10",type:"atgm",cell:[20,17],sev:5,prob:.4,sources:[{k:"HUMINT",age:200,q:.7}],reasons:[]},
+ {id:"T11",type:"sniper",cell:[16,8],sev:4,prob:.5,sources:[{k:"ALGO",age:900,q:.7}],reasons:[]},
+ {id:"T12",type:null,cell:null,sources:[],reasons:[]},
+ {id:"T13",type:"drone",cell:[3,3],sev:3,prob:.3,sources:[{k:"ALGO",age:400,q:.6}],reasons:[]},
+ {id:"T14",type:"sniper",cell:[18,11],sev:4,prob:.6,dupOf:"T5",sources:[{k:"HUMINT",age:130,q:.8}],reasons:[]},
+ {id:"T15",type:"ied_side",cell:[15,18],sev:5,prob:.3,sources:[{k:"ALGO",age:60,q:.7}],reasons:[]},
+ {id:"T16",type:"sniper",cell:null,sources:[{k:"SIGINT",age:20,q:.5}],reasons:[]}
+];
+const LIVE_INTEL={id:"N1",type:"drone",cell:[19,13],sev:3,prob:.5,live:true,sources:[{k:"HUMINT",age:0,q:.85}],
+  reasons:[["anomaly","דיווח חי מכוח שכן: רחפן מרחף מעל החצרות"],["pattern","שימוש ברחפני תקיפה בגזרה בשבוע האחרון"],["terrain","חצרות פתוחות למעלה – אין כיסוי עילי"]]};
+
+/* ============ מצב ושמירה מקומית (Offline-First) ============ */
+const LS="ties.mvp.v1";
+const clone=o=>JSON.parse(JSON.stringify(o));
+function freshPersist(){return {ind:clone(PRIOR.ind),src:clone(PRIOR.src),reports:[],syncLog:[],online:true,before:null}}
+function load(){try{const v=JSON.parse(localStorage.getItem(LS));if(v&&v.ind&&v.src)return v}catch(e){}return freshPersist()}
+function save(){try{localStorage.setItem(LS,JSON.stringify(S.persist))}catch(e){}}
+const S={origin:[1,10],dest:[28,10],rifles:3,eng:false,stage:"plan",routes:[],visible:[],filt:null,selected:null,
+  threats:clone(BASE_THREATS),ingested:false,showFiltered:false,tapMode:null,tStart:0,decisionMs:null,segs:[],segIdx:0,
+  tab:"mission",focus:null,persist:load()};
+
+/* ============ עזרים ============ */
+const $=s=>document.querySelector(s);
+const key=c=>c[0]+","+c[1];
+const ter=c=>TER[MAP[c[1]][c[0]]];
+const pct=x=>Math.round(x*100)+"%";
+const mins=s=>Math.max(1,Math.round(s/60))+" דק׳";
+const LET={A:"א׳",B:"ב׳"};
+const passable=c=>c[0]>=0&&c[1]>=0&&c[0]<W&&c[1]<H&&ter(c).pass;
+const cheb=(a,b)=>Math.max(Math.abs(a[0]-b[0]),Math.abs(a[1]-b[1]));
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),3200)}
+const mean=s=>s.a/(s.a+s.b);
+
+/* ============ מנוע מסלולים (Pathfinding & Risk Trade-off) ============ */
+function dijkstra(a,b,o){
+  const dist=new Map([[key(a),0]]),prev=new Map(),done=new Set(),open=[[0,a]];
+  while(open.length){
+    open.sort((x,y)=>x[0]-y[0]);const [d,c]=open.shift();const ck=key(c);
+    if(done.has(ck))continue;done.add(ck);if(ck===key(b))break;
+    for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+      const n=[c[0]+dx,c[1]+dy];if(!passable(n))continue;const nk=key(n);if(done.has(nk))continue;
+      const t=ter(n);const w=t.sec+(o.exp||0)*t.exposed+(o.avoid&&o.avoid.has(nk)?o.avoidPen:0);
+      if(d+w<(dist.get(nk)??Infinity)){dist.set(nk,d+w);prev.set(nk,c);open.push([d+w,n])}
+    }
+  }
+  if(!dist.has(key(b)))return null;
+  const path=[b];let cur=b;while(key(cur)!==key(a)){cur=prev.get(key(cur));path.unshift(cur)}return path;
+}
+
+/* ============ מנוע אמינות והסברתיות ============ */
+const minAge=t=>t.sources.length?Math.min(...t.sources.map(s=>s.age)):Infinity;
+function conf(t){ // היתוך מקורות: אמינות סוג המקור × איכות × דעיכה בזמן
+  let miss=1;for(const s of t.sources){miss*=1-mean(S.persist.src[s.k])*s.q*Math.exp(-s.age/360)}return 1-miss;
+}
+const prob=t=>t.indicator?mean(S.persist.ind[t.indicator]):t.prob;
+function exposure(t,cells){
+  const T=TYPES[t.type];if(!T||!t.cell)return 0;
+  if(T.kind==="point")return cells.some(c=>c[0]===t.cell[0]&&c[1]===t.cell[1])?1:0;
+  const r=t.r||T.r;let s=0;
+  for(const c of cells)if(cheb(c,t.cell)<=r)s+=T.kind==="area"?.15:.25*ter(c).exposed;
+  return Math.min(1,s);
+}
+function confInfo(t,c){
+  const n=t.sources.length;
+  const lv=c>=.7?["גבוהה","hi"]:c>=.45?["בינונית","mid"]:["ספקולטיבית","lo"];
+  return {lv:lv[0],cls:lv[1],d:n>=2?`מוצלב · ${n} מקורות בלתי תלויים`:"מקור יחיד · לא מאומת"};
+}
+function level(r){return r<.3?["נמוך","ok"]:r<.6?["בינוני","warn"]:["גבוה","bad"]}
+
+function filterThreats(corridor){
+  const f={total:S.threats.length,out:0,expired:0,dup:0,empty:0};const vis=[];
+  for(const t of S.threats){
+    if(!t.type||!t.cell){f.empty++;continue}
+    if(t.dupOf){f.dup++;continue}
+    if(minAge(t)>720){f.expired++;continue}
+    const r=(t.r||TYPES[t.type].r||0)+2;
+    if(!corridor.some(c=>cheb(c,t.cell)<=r)){f.out++;continue}
+    vis.push(t);
+  }
+  f.shown=vis.length;return {vis,f};
+}
+function evalRoute(path,opt){
+  const R={path,dist:(path.length-1)*CELL,items:[],extra:0,engUsed:false};
+  let t=0;path.forEach((c,i)=>{if(i)t+=ter(c).sec});
+  for(const th of S.visible){
+    const e=exposure(th,path);if(e<=0)continue;
+    const p=prob(th),c=conf(th);
+    const idx=path.findIndex(x=>cheb(x,th.cell)<=(th.r||TYPES[th.type].r||0));
+    R.items.push({th,e,p,c,at:Math.max(0,idx)*CELL,base:p*e*(th.sev/5)*(.5+.5*c)});
+  }
+  const los=R.items.filter(i=>TYPES[i.th.type].kind==="los").sort((a,b)=>b.base-a.base);
+  los.forEach((it,i)=>{if(i<opt.rifles)it.cover=i+1});
+  for(const it of R.items){
+    let m=1;if(it.cover)m=.25;
+    if(it.th.type==="ied_door"&&opt.eng){m=.15;R.extra+=240;R.engUsed=true;it.eng=true}
+    it.q=it.base*m;
+  }
+  R.time=t+R.extra;
+  R.risk=1-R.items.reduce((a,it)=>a*(1-it.q),1);
+  const sq=R.items.reduce((a,it)=>a+it.q,0)||1;R.items.forEach(it=>it.share=it.q/sq);
+  R.items.sort((a,b)=>b.q-a.q);
+  R.losN=los.length;R.rifUsed=Math.min(opt.rifles,los.length);R.uncovered=Math.max(0,los.length-opt.rifles);
+  R.hasDoor=R.items.some(i=>i.th.type==="ied_door");
+  const cnt={};path.forEach(c=>{const n=MAP[c[1]][c[0]];cnt[n]=(cnt[n]||0)+1});
+  R.name=cnt.J?"ציר עקיף – חצרות פנימיות ובית קפיצה":(cnt["="]||0)/path.length>.5?"ציר ראשי – הרחוב המרכזי":"ציר משני – רחובות צדדיים";
+  return R;
+}
+function planRoutes(){
+  const r1=dijkstra(S.origin,S.dest,{});
+  if(!r1){toast("לא נמצא ציר עביר בין הנקודות");return}
+  const r2=dijkstra(S.origin,S.dest,{exp:45,avoid:new Set(r1.map(key)),avoidPen:30});
+  S.routes=[{id:"A",path:r1}];
+  if(r2){const s1=new Set(r1.map(key));const ov=r2.filter(c=>s1.has(key(c))).length/Math.max(r1.length,r2.length);if(ov<.85)S.routes.push({id:"B",path:r2})}
+  evaluate();S.stage="pending";S.selected=null;S.decisionMs=null;
+  render();toast(`אד״ן הושלם · הוצגו ${S.filt.shown} מתוך ${S.filt.total} אינדיקציות · הועבר לאישור קמ״ן`);
+}
+function evaluate(){
+  if(!S.routes.length)return;
+  const corridor=S.routes.flatMap(r=>r.path);
+  const {vis,f}=filterThreats(corridor);S.visible=vis;S.filt=f;
+  S.routes=S.routes.map(r=>Object.assign(evalRoute(r.path,{rifles:S.rifles,eng:S.eng}),{id:r.id,letter:LET[r.id]}));
+  const maxT=Math.max(...S.routes.map(r=>r.time));
+  S.routes.forEach(r=>r.score=r.risk+.15*r.time/maxT);
+  S.rec=S.routes.reduce((a,b)=>b.score<a.score?b:a).id;
+}
+const route=id=>S.routes.find(r=>r.id===id);
+
+function recText(){
+  const R=route(S.rec),O=S.routes.find(r=>r.id!==S.rec);
+  if(!O)return [`נמצא ציר עביר יחיד: <b>${R.name}</b> · סיכון משוקלל ${pct(R.risk)}.`];
+  const out=[`<b>TIES ממליץ על ציר ${R.letter}</b> (${R.name}) – סיכון משוקלל ${pct(R.risk)} לעומת ${pct(O.risk)} בציר ${O.letter}.`];
+  const ot=O.items[0];
+  if(ot&&ot.c>=.7&&ot.q>.3)out.push(`בציר ${O.letter}: ${TYPES[ot.th.type].name} בסבירות ${pct(ot.p)} המבוסס על מודיעין מוצלב (אמינות ${confInfo(ot.th,ot.c).lv}) – איום ממשי בנתיב, אין להיכנס אליו עיוור.`);
+  const spec=R.items.filter(i=>i.c<.7).length;
+  if(R.items.length)out.push(`בציר ${R.letter}: ${spec} מתוך ${R.items.length} האיומים מבוססים על מקור יחיד או אמינות בינונית – עדיף לנהל סיכון מפוזר וחלש מאשר איום ודאי.`);
+  if(R.losN)out.push(`${R.rifUsed} הקנים הפנויים מוקצים לחיפוי נקודתי על ${R.rifUsed} החלונות המסוכנים ביותר שזוהו${R.uncovered?` · ${R.uncovered} חלונות בסיכון נמוך נותרו ללא כיסוי`:""}.`);
+  const dt=O.time-R.time;
+  if(Math.abs(dt)>=60)out.push(`ציר ${R.letter} ${dt>0?"מהיר":"איטי"} ב-${mins(Math.abs(dt))}.`);
+  if(R.engUsed)out.push(`האיום בבית הקפיצה הופחת בזכות זיכוי הנדסי מקדים (+4 דק׳).`);
+  return out;
+}
+function altSuggestion(){
+  const O=S.routes.find(r=>r.id!==S.rec);if(!O||!O.hasDoor||S.eng)return null;
+  const alt=evalRoute(O.path,{rifles:S.rifles,eng:true});
+  return `לחלופין: זיכוי הנדסי מקדים לבית הקפיצה יוריד את סיכון ציר ${O.letter} ל-${pct(alt.risk)} (+4 דק׳).`;
+}
+function routeWhy(R){
+  const b=[];const top=R.items[0];
+  if(!top)b.push("לא זוהו איומים רלוונטיים לאורך הציר.");
+  else b.push(`איום מרכזי: ${TYPES[top.th.type].name} – סבירות ${pct(top.p)}, אמינות ${confInfo(top.th,top.c).lv} (${pct(top.share)} מהסיכון).`);
+  if(R.losN)b.push(`${R.losN} נקודות צליפה בקו ראייה לציר · ${R.rifUsed} מכוסות בחיפוי${R.uncovered?` · ${R.uncovered} ללא כיסוי`:""}.`);
+  if(R.hasDoor)b.push(R.engUsed?"דורש צוות הנדסה לזיכוי מקדים.":"מחייב פריצה והתבססות בבית קפיצה.");
+  b.push(`${R.dist} מ׳ · ${mins(R.time)} · ${R.items.length} איומים בנתיב.`);
+  return b;
+}
+
+/* ============ משוב שטח וסנכרון Delta ============ */
+function buildSegs(path){
+  const n=Math.min(3,Math.max(1,path.length-1)),L=path.length,segs=[];
+  for(let i=0;i<n;i++){
+    const a=Math.floor(i*(L-1)/n),b=Math.floor((i+1)*(L-1)/n);const cells=path.slice(a,b+1);
+    const cnt={};cells.forEach(c=>{const nm=ter(c).name;cnt[nm]=(cnt[nm]||0)+1});
+    const nm=Object.keys(cnt).sort((x,y)=>cnt[y]-cnt[x])[0];
+    segs.push({i,cells,from:a*CELL,to:b*CELL,name:nm,th:S.visible.filter(t=>exposure(t,cells)>0),st:null});
+  }
+  return segs;
+}
+const ST={clean:"✅ ציר נקי",verified:"⚠️ אומת חשד",bypass:"↪️ בוצע מעקף",contact:"💥 נתקלנו"};
+function report(st){
+  const seg=S.segs[S.segIdx];if(!seg)return;
+  const t0=performance.now();
+  seg.st=st;
+  S.persist.reports.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),ts:Date.now(),route:S.selected,seg:seg.i,st,th:seg.th.map(t=>t.id),synced:false,proc:false});
+  save();S.segIdx++;
+  if(S.segIdx>=S.segs.length)S.stage="arrived";
+  render();
+  toast(`${ST[st]} · נקלט בלחיצה אחת (${Math.round(performance.now()-t0)} מ״ש)${S.persist.online?"":" · נשמר מקומית"}`);
+  setTimeout(trySync,400);
+}
+function trySync(){
+  const P=S.persist;if(!P.online)return;
+  const pend=P.reports.filter(r=>!r.synced);if(!pend.length)return;
+  const last=P.syncLog.length?P.syncLog[P.syncLog.length-1].ts:0;
+  const payload={d:"EUD-07",since:last,r:pend.map(r=>[r.ts,r.route,r.seg,r.st,r.th.join("|")])};
+  const txt=JSON.stringify(payload);const bytes=new Blob([txt]).size;
+  pend.forEach(r=>r.synced=true);
+  P.syncLog.push({ts:Date.now(),n:pend.length,bytes,txt});if(P.syncLog.length>10)P.syncLog.shift();
+  save();renderHeader();if(S.tab==="debrief")renderPanel();
+  toast(`🔄 סנכרון Delta: ${pend.length} דיווחים · ${bytes} בייט בלבד`);
+}
+function setOnline(v){S.persist.online=v;save();renderHeader();if(v)trySync()}
+
+/* ============ תחקיר: עדכון בייסיאני ============ */
+const means=o=>Object.fromEntries(Object.entries(o).map(([k,v])=>[k,mean(v)]));
+function processDebrief(){
+  const P=S.persist;const pend=P.reports.filter(r=>!r.proc);
+  if(!pend.length){toast("אין דיווחים חדשים לעיבוד");return}
+  P.before={ind:means(P.ind),src:means(P.src)};
+  const all=[...BASE_THREATS,LIVE_INTEL];
+  for(const r of pend){
+    const pos=r.st==="verified"||r.st==="contact",neg=r.st==="clean";
+    if(pos||neg)for(const id of r.th){
+      const th=all.find(t=>t.id===id);if(!th)continue;
+      const w=TYPES[th.type].kind==="point"?1:.25; // ״לא נורה״ אינו הוכחה חזקה לכך שאין צלף
+      if(th.indicator)P.ind[th.indicator][pos?"a":"b"]+=1;
+      for(const s of th.sources)P.src[s.k][pos?"a":"b"]+=.5*w;
+    }
+    r.proc=true;
+  }
+  save();evaluate();render();toast(`עובדו ${pend.length} דיווחי שטח · משקלי האינדיקטורים והמקורות עודכנו`);
+}
+function simulateNeighbors(){
+  for(let i=0;i<3;i++)S.persist.reports.push({id:"nb"+Date.now()+i,ts:Date.now(),route:"-",seg:-1,st:"clean",th:["T8"],synced:true,proc:false,nb:true});
+  save();processDebrief();
+}
+
+/* ============ רינדור ============ */
+const STEPS=["דקירת מרחב","מיפוי סכנות (אד״ן)","אישור קמ״ן","בחירת ציר","תנועה ומשוב","תחקיר"];
+const STAGE_IDX={plan:0,pending:2,approved:3,moving:4,arrived:5};
+function renderHeader(){
+  const i=S.tab==="debrief"?5:STAGE_IDX[S.stage];
+  $("#steps").innerHTML=STEPS.map((s,k)=>`<div class="step ${k<i?"done":k===i?"act":""}">${k<i?"✓ ":""}${k+1}. ${s}</div>`).join("");
+  const n=$("#net");n.className="pill "+(S.persist.online?"on":"off");n.textContent=S.persist.online?"● מחובר (מוצפן)":"○ מנותק – Offline";
+  $("#queue").textContent="⏳ "+S.persist.reports.filter(r=>!r.synced).length+" בתור";
+  $("#ingest").disabled=!S.routes.length||S.ingested;
+  updTimer();
+}
+function updTimer(){
+  let ms=S.decisionMs??(S.stage==="approved"?Date.now()-S.tStart:null);
+  const el=$("#timer");
+  if(ms==null){el.textContent="⏱ --:--";return}
+  const s=Math.floor(ms/1000);el.textContent=`⏱ ${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}${S.decisionMs!=null?" ✓":""}`;
+  el.style.color=S.decisionMs!=null?(ms<300000?"var(--ok)":"var(--warn)"):"";
+}
+function svgEl(){return $("#map")}
+function renderMap(){
+  let h="";
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const ch=MAP[y][x];const f={"#":"var(--building)","=":"var(--main)",".":"var(--street)","c":"var(--court)","J":"var(--jump)"}[ch];
+    h+=`<rect x="${x*CELL}" y="${y*CELL}" width="${CELL}" height="${CELL}" fill="${f}" stroke="${ch==="#"?"var(--bstroke)":"none"}"/>`;
+  }
+  h+=`<text x="300" y="203" fill="#c9d1d9" font-size="11" text-anchor="middle" opacity=".7">הרחוב המרכזי</text>`;
+  h+=`<text x="200" y="258" fill="#c9d1d9" font-size="10" text-anchor="middle" opacity=".6">חצרות פנימיות</text>`;
+  h+=`<text x="490" y="300" fill="#ffcf8a" font-size="10" text-anchor="middle">בית קפיצה</text>`;
+  h+=`<g opacity=".7"><line x1="20" y1="385" x2="120" y2="385" stroke="#c9d1d9" stroke-width="2"/><text x="70" y="380" fill="#c9d1d9" font-size="10" text-anchor="middle">100 מ׳</text></g>`;
+  h+=`<text x="580" y="22" fill="#c9d1d9" font-size="12" text-anchor="middle">▲ צ</text>`;
+  // צירים
+  const order=[...S.routes].sort((a,b)=>(a.id===S.selected)-(b.id===S.selected));
+  for(const R of order){
+    const off=R.id==="A"?-3:3;const col=R.id==="A"?"var(--a)":"var(--b)";
+    const dim=S.selected&&S.selected!==R.id;const pend=S.stage==="pending";
+    const pts=R.path.map(c=>`${c[0]*CELL+10+off},${c[1]*CELL+10+off}`).join(" ");
+    h+=`<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="${S.selected===R.id?6:4}" stroke-linejoin="round" stroke-linecap="round" opacity="${dim?.18:pend?.55:.95}" ${pend?'stroke-dasharray="8 6"':""}/>`;
+    const m=R.path[Math.floor(R.path.length/2)];
+    if(!dim)h+=`<g><circle cx="${m[0]*CELL+10+off*4}" cy="${m[1]*CELL+10+off*5}" r="11" fill="${col}"/><text x="${m[0]*CELL+10+off*4}" y="${m[1]*CELL+14+off*5}" font-size="12" font-weight="700" text-anchor="middle" fill="#0b0f14">${R.letter}</text>${R.id===S.rec&&S.stage!=="pending"?`<text x="${m[0]*CELL+24+off*4}" y="${m[1]*CELL+14+off*5}" font-size="12">✅</text>`:""}</g>`;
+  }
+  // מקטעים בתנועה
+  if(S.segs.length&&(S.stage==="moving"||S.stage==="arrived")){
+    S.segs.forEach((sg,i)=>{const e=sg.cells[sg.cells.length-1];
+      const col=sg.st?(sg.st==="clean"?"var(--ok)":sg.st==="bypass"?"var(--a)":"var(--bad)"):i===S.segIdx?"#fff":"#6e7681";
+      h+=`<circle cx="${e[0]*CELL+10}" cy="${e[1]*CELL+10}" r="7" fill="${col}" stroke="#0b0f14" stroke-width="2"/>`;
+      if(i===S.segIdx)h+=`<polyline points="${sg.cells.map(c=>`${c[0]*CELL+10},${c[1]*CELL+10}`).join(" ")}" fill="none" stroke="#fff" stroke-width="2" stroke-dasharray="3 4"/>`;
+    });
+  }
+  // איומים
+  const sel=S.selected?route(S.selected):null;
+  const list=S.showFiltered?S.threats.filter(t=>t.cell&&t.type):S.visible;
+  for(const t of list){
+    const shown=S.visible.includes(t);const T=TYPES[t.type];const cx=t.cell[0]*CELL+10,cy=t.cell[1]*CELL+10;
+    const it=sel&&sel.items.find(i=>i.th===t);
+    if(shown&&T.kind!=="point")h+=`<circle cx="${cx}" cy="${cy}" r="${(t.r||T.r)*CELL}" fill="${T.kind==="area"?"#a371f7":"#f85149"}" opacity="${S.focus===t.id?.16:.05}"/>`;
+    if(it&&it.cover)h+=`<circle cx="${cx}" cy="${cy}" r="13" fill="none" stroke="var(--ok)" stroke-width="2.5"/>`;
+    if(it&&it.eng)h+=`<circle cx="${cx}" cy="${cy}" r="13" fill="none" stroke="var(--ok)" stroke-width="2.5" stroke-dasharray="3 2"/>`;
+    h+=`<g class="thm" data-id="${t.id}" style="cursor:pointer" opacity="${shown?1:.3}"><circle cx="${cx}" cy="${cy}" r="10" fill="${shown?"#0b0f14":"#333"}" stroke="${S.focus===t.id?"#fff":t.live?"#a371f7":"#f85149"}" stroke-width="${S.focus===t.id?2.5:1.5}"/><text x="${cx}" y="${cy+4}" font-size="11" text-anchor="middle">${T.icon}</text></g>`;
+  }
+  // מוצא / יעד
+  const o=S.origin,d=S.dest,isDef=key(o)==="1,10"&&key(d)==="28,10";
+  h+=`<g><circle cx="${o[0]*CELL+10}" cy="${o[1]*CELL+10}" r="9" fill="var(--ok)" stroke="#fff" stroke-width="2"/><text x="${o[0]*CELL+10}" y="${o[1]*CELL-4}" font-size="11" fill="#fff" text-anchor="middle" font-weight="700">${isDef?"אלפא":"מוצא"}</text></g>`;
+  h+=`<g><rect x="${d[0]*CELL+1}" y="${d[1]*CELL+1}" width="18" height="18" rx="3" fill="var(--bad)" stroke="#fff" stroke-width="2"/><text x="${d[0]*CELL+10}" y="${d[1]*CELL-4}" font-size="11" fill="#fff" text-anchor="middle" font-weight="700">${isDef?"בראבו":"יעד"}</text></g>`;
+  const svg=svgEl();svg.innerHTML=h;svg.classList.toggle("tapmode",!!S.tapMode);
+}
+function meter(label,v,col){return `<div class="meter"><span style="min-width:62px">${label}</span><div class="bar"><i style="width:${Math.round(v*100)}%;background:${col}"></i></div><span>${pct(v)}</span></div>`}
+function threatHTML(it){
+  const t=it.th,T=TYPES[t.type],ci=confInfo(t,it.c);
+  const ccol=ci.cls==="hi"?"#79c0ff":ci.cls==="mid"?"#4d7ea8":"#3a4a5c";
+  let mit="";
+  if(it.cover)mit=`<span class="mit ok">🛡 חיפוי מוקצה – קנה ${it.cover}</span>`;
+  else if(it.eng)mit=`<span class="mit ok">🛠 זיכוי הנדסי מקדים – הסיכון הופחת</span>`;
+  else if(T.kind==="los")mit=`<span class="mit bad">ללא כיסוי – אין קנים פנויים</span>`;
+  else if(t.type==="ied_door")mit=`<span class="mit info">ניתן להפחית בזיכוי הנדסי מקדים</span>`;
+  else if(t.type==="ied_side")mit=`<span class="mit info">שמור מרחק / מעקף נקודתי</span>`;
+  return `<div class="th ${S.focus===t.id?"focus":""}" data-id="${t.id}">
+    <div class="th-h"><span class="ic">${T.icon}</span><b>${T.name}</b>${t.live?'<span class="chip">חדש · חי</span>':""}<span class="muted">${it.at} מ׳ מהמוצא</span><span class="contrib">${pct(it.share)} מהסיכון</span></div>
+    ${meter("סבירות",it.p,it.p>=.6?"var(--bad)":it.p>=.35?"var(--warn)":"#6e7681")}
+    ${meter("אמינות",it.c,ccol)}
+    <div class="muted" style="margin-top:4px">אמינות ${ci.lv} · ${ci.d} · עודכן לפני ${minAge(t)} דק׳</div>
+    <ul class="why">${t.reasons.slice(0,3).map(([k,s])=>`<li><span>${RICON[k]}</span>${s}</li>`).join("")}</ul>
+    ${mit}</div>`;
+}
+function resourcesHTML(){
+  return `<div class="box"><h3>משאבים זמינים</h3>
+    <div class="row" style="justify-content:space-between"><span>קנים פנויים לחיפוי</span>
+      <div class="stepper"><button data-act="rif-">−</button><b>${S.rifles}</b><button data-act="rif+">+</button></div></div>
+    <label class="row" style="margin-top:8px"><input type="checkbox" id="eng" ${S.eng?"checked":""} style="width:20px;height:20px"> צוות הנדסה זמין לזיכוי מקדים (+4 דק׳)</label></div>`;
+}
+function matrixHTML(){
+  const rs=S.routes;const pend=S.stage==="pending";
+  const cell=(f)=>rs.map(r=>`<td>${f(r)}</td>`).join("");
+  return `<table class="mx"><thead><tr><th>פרמטר</th>${rs.map(r=>`<td><span class="dot" style="background:var(--${r.id.toLowerCase()})"></span> חלופה ${r.letter}<div class="muted">${r.name}</div></td>`).join("")}</tr></thead><tbody>
+  <tr><th>זמן תנועה</th>${cell(r=>mins(r.time)+(r.engUsed?" <span class='muted'>(כולל זיכוי)</span>":""))}</tr>
+  <tr><th>מרחק</th>${cell(r=>r.dist+" מ׳")}</tr>
+  <tr><th>איום מרכזי</th>${cell(r=>r.items[0]?`${TYPES[r.items[0].th.type].icon} ${TYPES[r.items[0].th.type].name} (${pct(r.items[0].p)})`:"—")}</tr>
+  <tr><th>חוזק ואמינות המקור</th>${cell(r=>{const i=r.items[0];if(!i)return"—";const c=confInfo(i.th,i.c);return `${c.lv}<div class="muted">${c.d}</div>`})}</tr>
+  <tr><th>סיכון משוקלל</th>${cell(r=>{const l=level(r.risk);return `<span class="lv ${l[1]}">${l[0]} · ${pct(r.risk)}</span>`})}</tr>
+  <tr><th>דרישת משאבים</th>${cell(r=>[r.losN?`${r.rifUsed} קנים לחיפוי`:"",r.uncovered?`${r.uncovered} חלונות לא מכוסים`:"",r.hasDoor?(r.engUsed?"צוות הנדסה":"פריצה לבית קפיצה"):""].filter(Boolean).join(" · ")||"—")}</tr>
+  ${pend?"":`<tr><th>המלצת TIES</th>${cell(r=>r.id===S.rec?"<b style='color:var(--ok)'>✅ מומלץ</b>":"<b style='color:var(--bad)'>❌ לא מומלץ</b>")}</tr>`}
+  </tbody></table>`;
+}
+function routeCardHTML(R,withBtn){
+  return `<div class="box rcard ${R.id}">
+    <div class="rhead"><h3 style="margin:0"><span class="dot" style="background:var(--${R.id.toLowerCase()})"></span> כרטיסיית הסברתיות · ציר ${R.letter}</h3>${R.id===S.rec?'<span class="lv ok">מומלץ</span>':""}</div>
+    <div class="muted" style="margin:4px 0 6px">${R.name}</div>
+    <ul class="why">${routeWhy(R).map(s=>`<li><span>•</span>${s}</li>`).join("")}</ul>
+    ${R.items.map(threatHTML).join("")}
+    ${withBtn?`<button class="${R.id===S.rec?"primary":""}" data-act="choose" data-id="${R.id}" style="width:100%;margin-top:8px">בחר ציר ${R.letter} ויציאה לתנועה</button>`:""}
+  </div>`;
+}
+function missionHTML(){
+  if(S.stage==="plan"){
+    return `<div class="box"><h3>1. דקירת נקודת מוצא ויעד</h3>
+      <p class="muted" style="margin:0 0 8px">לחץ על כפתור ואז על תא עביר במפה (רחוב / חצר).</p>
+      <div class="row"><button data-act="tap-origin" class="${S.tapMode==="origin"?"primary":""}">📍 מוצא (${key(S.origin)})</button>
+      <button data-act="tap-dest" class="${S.tapMode==="dest"?"primary":""}">🎯 יעד (${key(S.dest)})</button>
+      <button class="ghost" data-act="reset-pts">איפוס לתרחיש</button></div></div>
+      ${resourcesHTML()}
+      <button class="primary" data-act="plan" style="width:100%;min-height:56px;font-size:17px">מיפוי סכנות וחישוב צירים</button>
+      <p class="muted">המשימה: מנקודת היערכות ״אלפא״ למתחם ״בראבו״ (600 מ׳ בשטח בנוי). כוח מצומצם – אין מספיק קנים לאבטחת כל חלון.</p>`;
+  }
+  const f=S.filt;
+  const filt=`<div class="muted" style="margin-bottom:10px">🔎 מוצגות <b>${f.shown}</b> מתוך ${f.total} אינדיקציות · סוננו: ${f.out} מחוץ למרחב, ${f.expired} פג תוקף, ${f.dup} כפילות, ${f.empty} ללא תוכן</div>`;
+  if(S.stage==="pending"){
+    return filt+`<div class="box gate"><h3>⏳ ממתין לאישור קמ״ן יחידה</h3>
+      <p class="muted" style="margin:0 0 10px">${S.routes.length} חלופות ציר והערכת הסיכונים הועברו לאישור מקצועי (Human-in-the-Loop) לפני הפצה למכשיר הקצה.</p>
+      <div class="row"><button class="primary" data-act="approve">✔ אישור קמ״ן (הדמיה)</button><button data-act="back">חזרה לתכנון</button></div></div>
+      <div class="box" style="opacity:.6"><h3>טיוטה – מטריצת השוואה</h3>${matrixHTML()}</div>`;
+  }
+  if(S.stage==="approved"){
+    const alt=altSuggestion();
+    return filt+`<div class="box rec"><h3>🧭 המלצת TIES <span class="muted">(אושר ע״י קמ״ן)</span></h3>${recText().map(s=>`<p>${s}</p>`).join("")}
+      ${alt?`<p class="muted">${alt}</p><button data-act="eng-on">🛠 החל זיכוי הנדסי</button>`:""}</div>
+      <div class="box"><h3>מטריצת השוואת חלופות</h3>${matrixHTML()}</div>
+      ${resourcesHTML()}
+      ${[route(S.rec),...S.routes.filter(r=>r.id!==S.rec)].map(r=>routeCardHTML(r,true)).join("")}`;
+  }
+  const R=route(S.selected);
+  const done=S.segs.filter(s=>s.st).map(s=>`<div><span>מקטע ${s.i+1} · ${s.name}</span><span>${ST[s.st]}</span></div>`).join("");
+  if(S.stage==="moving"){
+    const sg=S.segs[S.segIdx];
+    return `<div class="box"><h3>בתנועה · ציר ${R.letter}</h3><div class="muted">${R.name} · החלטה התקבלה תוך ${Math.round(S.decisionMs/1000)} שנ׳</div>
+      <div class="seglist" style="margin-top:8px">${done}</div></div>
+      <div class="box" style="border-color:#fff3"><h3>מקטע ${sg.i+1}/${S.segs.length} · ${sg.from}–${sg.to} מ׳ · ${sg.name}</h3>
+      <div>${sg.th.length?sg.th.map(t=>`<span class="chip">${TYPES[t.type].icon} ${TYPES[t.type].name}</span>`).join(""):'<span class="muted">אין איומים ידועים במקטע</span>'}</div>
+      <div class="fb"><button class="c1" data-act="fb" data-st="clean">${ST.clean}</button><button class="c2" data-act="fb" data-st="verified">${ST.verified}</button>
+      <button class="c3" data-act="fb" data-st="bypass">${ST.bypass}</button><button class="c4" data-act="fb" data-st="contact">${ST.contact}</button></div>
+      <p class="muted" style="margin:8px 0 0">לחיצה אחת בסיום המקטע · נשמר מקומית ומסונכרן כשיש קשר.</p></div>
+      ${routeCardHTML(R,false)}`;
+  }
+  return `<div class="box rec"><h3>🏁 הכוח הגיע ליעד</h3><div class="seglist">${done}</div>
+    <p class="muted">הדיווחים נשמרו ${S.persist.online?"וסונכרנו":"מקומית וימתינו לחידוש קשר"}. בתחקיר הם יעדכנו את משקלי האינדיקטורים והמקורות.</p>
+    <div class="row"><button class="primary" data-act="to-debrief">מעבר לתחקיר</button><button data-act="new">משימה חדשה</button></div></div>`;
+}
+function debriefHTML(){
+  const P=S.persist,B=P.before;
+  const pend=P.reports.filter(r=>!r.proc).length;
+  const row=(o,k,lbl)=>{const now=mean(o[k]);const was=B?B[o===P.ind?"ind":"src"][k]:null;
+    const d=was==null?"":now>was+.001?`<span class="up">▲ ${pct(was)}→</span>`:now<was-.001?`<span class="down">▼ ${pct(was)}→</span>`:"";
+    return `<tr><td>${lbl}</td><td>${d} <b>${pct(now)}</b></td><td class="muted">α=${o[k].a.toFixed(1)} β=${o[k].b.toFixed(1)}</td></tr>`};
+  const sl=P.syncLog[P.syncLog.length-1];
+  return `<div class="box"><h3>דיווחי שטח</h3><p class="muted" style="margin:0 0 8px">${P.reports.length} דיווחים נאספו · ${pend} ממתינים לעיבוד · ${P.reports.filter(r=>!r.synced).length} ממתינים לסנכרון</p>
+    <div class="row"><button class="primary" data-act="process" ${pend?"":"disabled"}>עיבוד תחקיר (עדכון בייסיאני)</button></div></div>
+    <div class="box"><h3>אמינות אינדיקטורים · P(איום אמיתי)</h3><table class="db">${Object.keys(P.ind).map(k=>row(P.ind,k,PRIOR.ind[k].label)).join("")}</table>
+    <button style="margin-top:8px" data-act="neighbors">הדמיה: 3 כוחות שכנים מדווחים ״חבית כחולה – נקי״</button>
+    <p class="muted">שבירת קורלציה: דיווחי ״נקי״ חוזרים מורידים אוטומטית את משקל האינדיקטור.</p></div>
+    <div class="box"><h3>אמינות סוגי מקור <span class="muted">(תצוגת קמ״ן/שרת – לא מוצגת ללוחם)</span></h3><table class="db">${Object.keys(P.src).map(k=>row(P.src,k,PRIOR.src[k].label)).join("")}</table></div>
+    <div class="box"><h3>סנכרון Delta</h3>${sl?`<p class="muted" style="margin:0 0 6px">אחרון: ${new Date(sl.ts).toLocaleTimeString("he-IL")} · ${sl.n} דיווחים · ${sl.bytes} בייט</p><pre>${sl.txt.replace(/</g,"&lt;")}</pre>`:'<p class="muted">טרם בוצע סנכרון.</p>'}</div>
+    <button class="ghost" data-act="wipe" style="width:100%">איפוס נתוני למידה מקומיים</button>`;
+}
+function renderPanel(){
+  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("act",b.dataset.tab===S.tab));
+  $("#panel").innerHTML=S.tab==="mission"?missionHTML():debriefHTML();
+}
+function render(){renderHeader();renderMap();renderPanel()}
+
+/* ============ אירועים ============ */
+document.addEventListener("click",e=>{
+  const tb=e.target.closest(".tabs button");if(tb){S.tab=tb.dataset.tab;render();return}
+  const b=e.target.closest("[data-act]");if(!b)return;
+  const a=b.dataset.act;
+  if(a==="tap-origin"||a==="tap-dest"){S.tapMode=S.tapMode===a.slice(4)?null:a.slice(4);render();if(S.tapMode)toast("לחץ על תא עביר במפה")}
+  else if(a==="reset-pts"){S.origin=[1,10];S.dest=[28,10];S.tapMode=null;render()}
+  else if(a==="plan"){S.tapMode=null;planRoutes()}
+  else if(a==="approve"){S.stage="approved";S.tStart=Date.now();render();toast("הצירים אושרו ע״י קמ״ן והופצו למכשיר הקצה")}
+  else if(a==="back"){S.stage="plan";S.routes=[];S.ingested=false;S.threats=clone(BASE_THREATS);render()}
+  else if(a==="rif-"||a==="rif+"){S.rifles=Math.max(0,Math.min(8,S.rifles+(a==="rif+"?1:-1)));evaluate();render()}
+  else if(a==="eng-on"){S.eng=true;evaluate();render();toast("זיכוי הנדסי הוחל – ההמלצה חושבה מחדש")}
+  else if(a==="choose"){S.selected=b.dataset.id;S.decisionMs=Date.now()-S.tStart;S.segs=buildSegs(route(S.selected).path);S.segIdx=0;S.stage="moving";render();
+    toast(`נבחר ציר ${LET[S.selected]}${S.selected===S.rec?" (בהתאם להמלצה)":" (בניגוד להמלצה – נרשם)"}`)}
+  else if(a==="fb")report(b.dataset.st);
+  else if(a==="to-debrief"){S.tab="debrief";render()}
+  else if(a==="new"){Object.assign(S,{stage:"plan",routes:[],selected:null,segs:[],segIdx:0,decisionMs:null,ingested:false,threats:clone(BASE_THREATS),eng:false,focus:null});render()}
+  else if(a==="process")processDebrief();
+  else if(a==="neighbors")simulateNeighbors();
+  else if(a==="wipe"){S.persist=freshPersist();save();evaluate();render();toast("נתוני הלמידה אופסו")}
+});
+document.addEventListener("change",e=>{
+  if(e.target.id==="eng"){S.eng=e.target.checked;evaluate();render()}
+  if(e.target.id==="showFiltered"){S.showFiltered=e.target.checked;renderMap()}
+});
+$("#net").onclick=()=>setOnline(!S.persist.online);
+$("#ingest").onclick=()=>{
+  if(S.ingested||!S.routes.length)return;
+  const before=Object.fromEntries(S.routes.map(r=>[r.id,r.risk]));const oldRec=S.rec;
+  S.threats.push(clone(LIVE_INTEL));S.ingested=true;evaluate();
+  const hit=S.routes.filter(r=>r.items.some(i=>i.th.id==="N1"));
+  S.focus="N1";render();
+  toast(hit.length?`📡 ידיעה חיה: ${TYPES.drone.name} · ציר ${hit.map(r=>`${r.letter}: ${pct(before[r.id])}→${pct(r.risk)}`).join(", ")}${S.rec!==oldRec?" · ההמלצה השתנתה!":""}`:"📡 ידיעה חדשה התקבלה – אינה משפיעה על הצירים (סוננה)");
+};
+svgEl().addEventListener("click",e=>{
+  const m=e.target.closest(".thm");
+  if(m&&!S.tapMode){S.focus=S.focus===m.dataset.id?null:m.dataset.id;render();const el=document.querySelector(`.th[data-id="${S.focus}"]`);if(el)el.scrollIntoView({behavior:"smooth",block:"center"});return}
+  if(!S.tapMode)return;
+  const svg=svgEl(),pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;
+  const p=pt.matrixTransform(svg.getScreenCTM().inverse());const c=[Math.floor(p.x/CELL),Math.floor(p.y/CELL)];
+  if(!passable(c)){toast("תא לא עביר – בחר רחוב או חצר");return}
+  if(S.tapMode==="origin")S.origin=c;else S.dest=c;S.tapMode=null;render();
+});
+window.addEventListener("online",()=>setOnline(true));
+window.addEventListener("offline",()=>setOnline(false));
+setInterval(()=>{if(S.stage==="approved")updTimer()},1000);
+render();
+</script>
+</body>
+</html>
